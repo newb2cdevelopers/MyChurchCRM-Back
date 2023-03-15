@@ -4,7 +4,7 @@ export class MemberGeneralInfoDto {
 
     @ApiProperty({ type: String })
     fullName: string;
-  // Document type
+    
     @ApiProperty({ type: String })
     documentType: string;
 
