@@ -33,6 +33,7 @@
     "@nestjs/schematics": "^9.0.4",
     "@nestjs/swagger": "^5.2.0",
     "@schematics/angular": "^9.1.0",
+    "bcrypt": "^5.1.0",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.0.0",
     "mongoose": "^6.2.0",
