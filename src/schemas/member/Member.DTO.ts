@@ -142,4 +142,7 @@ export class MemberGeneralInfoDto {
 
      @ApiProperty({ type: String })
      comments: string;
+
+     @ApiProperty({ type: String, required: true })
+     workFrontId
    }
