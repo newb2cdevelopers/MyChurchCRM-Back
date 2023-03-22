@@ -46,10 +46,6 @@ const MemberMinistryStudySchema = SchemaFactory.createForClass(MemberMinistryStu
 @Schema()
 class MemberWorkFront {
  _id: number;
-
- @Prop()
- name: string;  
-
  
  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Workfront' })
  workFrontId: string;

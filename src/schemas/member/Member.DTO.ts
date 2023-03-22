@@ -124,9 +124,6 @@ export class MemberGeneralInfoDto {
    export class MemberWorkFrontDto {
     @ApiProperty({ type: String })
     _id: string;
-   
-    @ApiProperty({ type: String })
-     name: string;
      
      @ApiProperty({ type: String })
      role: string;

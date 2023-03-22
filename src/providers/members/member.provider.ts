@@ -9,74 +9,95 @@ import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 export class MemberProvider {
   constructor(
     @InjectModel(Members.name) private memberModel: Model<MemberDocument>,
-  ) {}
+  ) { }
 
-  async getAllMembers(churchId : string = null) {
+  async getAllMembers(churchId: string = null) {
     if (churchId) {
       return this.memberModel.find({
         churchId: churchId
+      }).populate({
+        path: "workFronts",
+        model: "MemberWorkFront",
+        populate: {
+          path: "workFrontId",
+          model: "Workfront"
+        }
       })
     }
 
     return this.memberModel.find()
   }
 
-  async getMemberByIdOrDocument(isSearchById : Boolean, identifier: string ): Promise< Members > {
+  async getMemberByIdOrDocument(isSearchById: Boolean, identifier: string): Promise<Members> {
 
-    if(isSearchById.toString() === "true") {
-      return  await this.memberModel.findOne({
+    if (isSearchById.toString() === "true") {
+      return await this.memberModel.findOne({
         _id: identifier,
+      }).populate({
+        path: "workFronts",
+        model: "MemberWorkFront",
+        populate: {
+          path: "workFrontId",
+          model: "Workfront"
+        }
       });
     }
 
-    return  await this.memberModel.findOne({
-        documentNumber: identifier,
-      });
+    return await this.memberModel.findOne({
+      documentNumber: identifier,
+    }).populate({
+      path: "workFronts",
+      model: "MemberWorkFront",
+      populate: {
+        path: "workFrontId",
+        model: "Workfront"
+      }
+    });
   }
 
-  async create(member: Members) : Promise<GeneralResponse> {
+  async create(member: Members): Promise<GeneralResponse> {
 
     let response: GeneralResponse = { isSuccessful: true };
 
     try {
-      
-      const existingUser  = await this.memberModel.findOne({
-         documentNumber: member.documentNumber,
+
+      const existingUser = await this.memberModel.findOne({
+        documentNumber: member.documentNumber,
       });
-    
-    if (existingUser) {
-      response.message = "El número de cédula ya está registrado"
-      response.isSuccessful = false;
-      return response;
-    };
 
-    if (member.relatives && member.relatives.length > 0) {
-      const relativeDocuments = member.relatives.map(relative => {
-        return relative.documentNumber;
-      })
+      if (existingUser) {
+        response.message = "El número de cédula ya está registrado"
+        response.isSuccessful = false;
+        return response;
+      };
 
-      const relativeMembers = await this.memberModel.find(
-        {
-          documentNumber: {$in: relativeDocuments}
+      if (member.relatives && member.relatives.length > 0) {
+        const relativeDocuments = member.relatives.map(relative => {
+          return relative.documentNumber;
+        })
+
+        const relativeMembers = await this.memberModel.find(
+          {
+            documentNumber: { $in: relativeDocuments }
+          }
+        )
+
+        for (let index = 0; index < member.relatives.length; index++) {
+
+          const relativeFound = relativeMembers.filter(relativeMember => { return relativeMember.documentNumber === member.relatives[index].documentNumber });
+
+          if (relativeFound.length > 0) {
+            member.relatives[index].isMember = true;
+            member.relatives[index].Member = relativeFound[0]._id
+          }
         }
-      )
 
-      for (let index = 0; index < member.relatives.length; index++) {
-        
-        const relativeFound = relativeMembers.filter(relativeMember => {return relativeMember.documentNumber ===  member.relatives[index].documentNumber });
-
-        if (relativeFound.length > 0) {
-          member.relatives[index].isMember = true;
-          member.relatives[index].Member = relativeFound[0]._id
-        }
       }
-      
-    }
-    
-    const newMember =  await  this.memberModel.create(member);
-    response.data  = newMember;
 
-    return response;
+      const newMember = await this.memberModel.create(member);
+      response.data = newMember;
+
+      return response;
     } catch (error) {
       console.log(error);
       response.isSuccessful = false;
@@ -87,22 +108,22 @@ export class MemberProvider {
     }
   }
 
-  async updateGeneralMemberInfo(memberId:string, updatedMember: MemberGeneralInfoDto) : Promise<GeneralResponse> {
+  async updateGeneralMemberInfo(memberId: string, updatedMember: MemberGeneralInfoDto): Promise<GeneralResponse> {
 
     let response: GeneralResponse = { isSuccessful: true };
-    
+
     try {
       const existingMember = await this.memberModel.findOne({
         _id: memberId,
       });
-      
+
       if (!existingMember) {
         response.isSuccessful = false;
         response.message =
-            'Persona no encontrada.';
+          'Persona no encontrada.';
         return response
       }
-  
+
       try {
         await this.memberModel.updateOne(
           {
@@ -126,30 +147,37 @@ export class MemberProvider {
             },
           },
         );
-        
+
         response.data = await this.memberModel.findOne({
           _id: memberId,
+        }).populate({
+          path: "workFronts",
+          model: "MemberWorkFront",
+          populate: {
+            path: "workFrontId",
+            model: "Workfront"
+          }
         });
 
         return response;
-  
+
       } catch (error) {
         console.log(error);
-  
+
         response.isSuccessful = false;
         response.message =
-            'Error actualizando la información general.';
+          'Error actualizando la información general.';
         return response;
       }
     } catch (error) {
       response.isSuccessful = false;
       response.message =
-          'Error actualizando la información general.';
+        'Error actualizando la información general.';
       return response;
     }
   }
 
-  async updateAdditionalAcademicStudies(memberId:string, additionalAcademicData: AdditionalAcademicStudyDto) : Promise<GeneralResponse> {
+  async updateAdditionalAcademicStudies(memberId: string, additionalAcademicData: AdditionalAcademicStudyDto): Promise<GeneralResponse> {
 
     let response: GeneralResponse = { isSuccessful: true };
 
@@ -157,24 +185,24 @@ export class MemberProvider {
       const existingMember = await this.memberModel.findOne({
         _id: memberId,
       });
-      
+
       if (!existingMember) {
         response.isSuccessful = false;
         response.message =
-            'Persona no encontrada.';
+          'Persona no encontrada.';
         return response
       }
-  
+
       try {
-        
+
         if (additionalAcademicData._id) {
-          const filterStudies  = existingMember.additionalAcademicStudies.filter(study => {return study._id.toString() === additionalAcademicData._id});
+          const filterStudies = existingMember.additionalAcademicStudies.filter(study => { return study._id.toString() === additionalAcademicData._id });
 
           if (filterStudies.length === 0) {
-            
+
             response.isSuccessful = false;
             response.message = "Información académica inválida"
-            
+
             return response;
           }
 
@@ -193,14 +221,14 @@ export class MemberProvider {
             }
           );
 
-        }else{
+        } else {
           const newStudy = {
             name: additionalAcademicData.name,
             isFinished: additionalAcademicData.isFinished,
             AcademicInstitutionName: additionalAcademicData.AcademicInstitutionName,
             comments: additionalAcademicData.comments
           };
-          
+
           const updatedMember = await this.memberModel.updateOne(
             {
               _id: memberId,
@@ -214,19 +242,26 @@ export class MemberProvider {
           );
 
         }
-  
+
       } catch (error) {
         console.log(error);
-  
+
         response.isSuccessful = false;
         response.message =
-            'Error actualizando la información académica.';
+          'Error actualizando la información académica.';
 
-            return response;
+        return response;
       }
 
       response.data = await this.memberModel.findOne({
         _id: memberId,
+      }).populate({
+        path: "workFronts",
+        model: "MemberWorkFront",
+        populate: {
+          path: "workFrontId",
+          model: "Workfront"
+        }
       });
 
       return response;
@@ -234,12 +269,12 @@ export class MemberProvider {
     } catch (error) {
       response.isSuccessful = false;
       response.message =
-          'Error actualizando la información académica.';
+        'Error actualizando la información académica.';
       return response;
     }
   }
 
-  async updateRelativeInformation(memberId:string, relativeData: RelativeDto) : Promise<GeneralResponse> {
+  async updateRelativeInformation(memberId: string, relativeData: RelativeDto): Promise<GeneralResponse> {
 
     let response: GeneralResponse = { isSuccessful: true };
 
@@ -247,24 +282,24 @@ export class MemberProvider {
       const existingMember = await this.memberModel.findOne({
         _id: memberId,
       });
-      
+
       if (!existingMember) {
         response.isSuccessful = false;
         response.message =
-            'Persona no encontrada.';
+          'Persona no encontrada.';
         return response
       }
-  
+
       try {
-        
-        if (relativeData._id) {          
-          const filterRelatives  = existingMember.relatives.filter(relative => {return relative._id.toString() === relativeData._id});
+
+        if (relativeData._id) {
+          const filterRelatives = existingMember.relatives.filter(relative => { return relative._id.toString() === relativeData._id });
 
           if (filterRelatives.length === 0) {
-            
+
             response.isSuccessful = false;
             response.message = "Información familiar inválida"
-            
+
             return response;
           }
 
@@ -272,7 +307,7 @@ export class MemberProvider {
             {
               _id: memberId,
               "relatives._id": relativeData._id
-            }, 
+            },
             {
               $set: {
                 "relatives.$.name": relativeData.name,
@@ -288,27 +323,27 @@ export class MemberProvider {
             }
           );
 
-        }else{
-          
-          let newRelative : any =  {
-            name : relativeData.name,
-            address : relativeData.address,
-            mobilePhone : relativeData.mobilePhone,
+        } else {
+
+          let newRelative: any = {
+            name: relativeData.name,
+            address: relativeData.address,
+            mobilePhone: relativeData.mobilePhone,
             email: relativeData.email,
-            birthDate : relativeData.birthDate,
-            educationalLevel : relativeData.educationalLevel,
-            occupation : relativeData.occupation,
-            kinship : relativeData.kinship,
+            birthDate: relativeData.birthDate,
+            educationalLevel: relativeData.educationalLevel,
+            occupation: relativeData.occupation,
+            kinship: relativeData.kinship,
             documentNumber: relativeData.documentNumber,
             comments: relativeData.comments
           }
           const memberRelative = await this.memberModel.findOne({
             documentNumber: relativeData.documentNumber
           })
-          
+
           if (memberRelative) {
             newRelative.isMember = true,
-            newRelative.Member = memberRelative._id;
+              newRelative.Member = memberRelative._id;
           };
 
           const updatedMember = await this.memberModel.updateOne(
@@ -324,18 +359,25 @@ export class MemberProvider {
           );
 
         }
-  
+
       } catch (error) {
         console.log(error);
-  
+
         response.isSuccessful = false;
         response.message =
-            'Error actualizando la información familiar.';
-            return response;
+          'Error actualizando la información familiar.';
+        return response;
       }
 
       response.data = await this.memberModel.findOne({
         _id: memberId,
+      }).populate({
+        path: "workFronts",
+        model: "MemberWorkFront",
+        populate: {
+          path: "workFrontId",
+          model: "Workfront"
+        }
       });
 
       return response;
@@ -343,12 +385,12 @@ export class MemberProvider {
     } catch (error) {
       response.isSuccessful = false;
       response.message =
-          'Error actualizando la información familiar.';
+        'Error actualizando la información familiar.';
       return response;
     }
   }
 
-  async updateMinistryStudies(memberId:string, ministryStudiesData: MemberMinistryStudyDto) : Promise<GeneralResponse> {
+  async updateMinistryStudies(memberId: string, ministryStudiesData: MemberMinistryStudyDto): Promise<GeneralResponse> {
 
     let response: GeneralResponse = { isSuccessful: true };
 
@@ -356,24 +398,24 @@ export class MemberProvider {
       const existingMember = await this.memberModel.findOne({
         _id: memberId,
       });
-      
+
       if (!existingMember) {
         response.isSuccessful = false;
         response.message =
-            'Persona no encontrada.';
+          'Persona no encontrada.';
         return response
       }
-  
+
       try {
-        
+
         if (ministryStudiesData._id) {
-          const filterMinistryStudies  = existingMember.ministryStudies.filter(ministryStudy => {return ministryStudy._id.toString() === ministryStudiesData._id});
+          const filterMinistryStudies = existingMember.ministryStudies.filter(ministryStudy => { return ministryStudy._id.toString() === ministryStudiesData._id });
 
           if (filterMinistryStudies.length === 0) {
-            
+
             response.isSuccessful = false;
             response.message = "Información de estudios ministeriales inválida"
-            
+
             return response;
           }
 
@@ -393,16 +435,16 @@ export class MemberProvider {
             }
           );
 
-        }else{
-       
+        } else {
+
           const newMinistryStudy = {
-            name : ministryStudiesData.name,
+            name: ministryStudiesData.name,
             startDate: ministryStudiesData.startDate,
             endDate: ministryStudiesData.endDate,
-            status : ministryStudiesData.status,
+            status: ministryStudiesData.status,
             comments: ministryStudiesData.comments
           }
-  
+
           const updatedMember = await this.memberModel.updateOne(
             {
               _id: memberId,
@@ -416,19 +458,26 @@ export class MemberProvider {
           );
 
         }
-  
+
       } catch (error) {
         console.log(error);
-  
+
         response.isSuccessful = false;
         response.message =
-            'Información de estudios ministeriales inválida.';
+          'Información de estudios ministeriales inválida.';
 
-         return response;
+        return response;
       }
 
       response.data = await this.memberModel.findOne({
         _id: memberId,
+      }).populate({
+        path: "workFronts",
+        model: "MemberWorkFront",
+        populate: {
+          path: "workFrontId",
+          model: "Workfront"
+        }
       });
 
       return response;
@@ -436,19 +485,19 @@ export class MemberProvider {
     } catch (error) {
       response.isSuccessful = false;
       response.message =
-          'Información de estudios ministeriales inválida.';
+        'Información de estudios ministeriales inválida.';
       return response;
     }
   }
 
-  async updateWorkfronts(memberId:string, workfrontData: MemberWorkFrontDto) : Promise<GeneralResponse> {
+  async updateWorkfronts(memberId: string, workfrontData: MemberWorkFrontDto): Promise<GeneralResponse> {
 
     let response: GeneralResponse = { isSuccessful: true };
 
     if (!workfrontData.workFrontId) {
       response.isSuccessful = false;
       response.message =
-          'Debe seleccionar un frente de trabajo válido.';
+        'Debe seleccionar un frente de trabajo válido.';
       return response
     }
 
@@ -456,24 +505,24 @@ export class MemberProvider {
       const existingMember = await this.memberModel.findOne({
         _id: memberId,
       });
-      
+
       if (!existingMember) {
         response.isSuccessful = false;
         response.message =
-            'Persona no encontrada.';
+          'Persona no encontrada.';
         return response
       }
-  
+
       try {
-        
+
         if (workfrontData._id) {
-          const filterWorkfronts  = existingMember.workFronts.filter(workfront => {return workfront._id.toString() === workfrontData._id});
+          const filterWorkfronts = existingMember.workFronts.filter(workfront => { return workfront._id.toString() === workfrontData._id });
 
           if (filterWorkfronts.length === 0) {
-            
+
             response.isSuccessful = false;
             response.message = "Información de frentes de trabajo inválida"
-            
+
             return response;
           }
 
@@ -484,7 +533,6 @@ export class MemberProvider {
             },
             {
               $set: {
-                "workFronts.$.name": workfrontData.name,
                 "workFronts.$.startDate": workfrontData.startDate,
                 "workFronts.$.endDate": workfrontData.endDate,
                 "workFronts.$.role": workfrontData.role,
@@ -495,10 +543,9 @@ export class MemberProvider {
             }
           );
 
-        }else{
-       
+        } else {
+
           const newWorkFront = {
-            name: workfrontData.name,
             startDate: workfrontData.startDate,
             endDate: workfrontData.endDate,
             role: workfrontData.role,
@@ -506,7 +553,7 @@ export class MemberProvider {
             comments: workfrontData.comments,
             workFrontId: workfrontData.workFrontId
           }
-  
+
 
           const updatedMember = await this.memberModel.updateOne(
             {
@@ -521,19 +568,26 @@ export class MemberProvider {
           );
 
         }
-  
+
       } catch (error) {
         console.log(error);
-  
+
         response.isSuccessful = false;
         response.message =
-            'Error actualizando la información de frentes de trabajo';
+          'Error actualizando la información de frentes de trabajo';
 
         return response;
       }
 
       response.data = await this.memberModel.findOne({
         _id: memberId,
+      }).populate({
+        path: "workFronts",
+        model: "MemberWorkFront",
+        populate: {
+          path: "workFrontId",
+          model: "Workfront"
+        }
       });
 
       return response;
@@ -541,7 +595,7 @@ export class MemberProvider {
     } catch (error) {
       response.isSuccessful = false;
       response.message =
-          'Error actualizando la información de frentes de trabajo.';
+        'Error actualizando la información de frentes de trabajo.';
       return response;
     }
   }
