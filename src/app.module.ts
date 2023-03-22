@@ -4,6 +4,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CommonModule } from './modules/common/common.module';
 import { UserModule } from './modules/user/user.module';
 import { ChurchModule } from './modules/church/church.module';
+import { WorkfrontModule } from './modules/workfront/workfront.module';
 import { EventModule } from './modules/event/event.module';
 import { AttendeeModule } from './modules/attendee/attendee.module';
 import { MemberModule } from './modules/member/member.module';
@@ -23,7 +24,8 @@ import { ModuleLocalModule } from './modules/module/module.module';
     MemberModule,
     RoleModule,
     FunctionalityModule,
-    ModuleLocalModule
+    ModuleLocalModule,
+    WorkfrontModule
   ],
 })
 export class AppModule {}

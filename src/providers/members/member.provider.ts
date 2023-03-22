@@ -221,6 +221,8 @@ export class MemberProvider {
         response.isSuccessful = false;
         response.message =
             'Error actualizando la información académica.';
+
+            return response;
       }
 
       response.data = await this.memberModel.findOne({
@@ -328,7 +330,8 @@ export class MemberProvider {
   
         response.isSuccessful = false;
         response.message =
-            'Error actualizando la información académica.';
+            'Error actualizando la información familiar.';
+            return response;
       }
 
       response.data = await this.memberModel.findOne({
@@ -340,7 +343,7 @@ export class MemberProvider {
     } catch (error) {
       response.isSuccessful = false;
       response.message =
-          'Error actualizando la información académica.';
+          'Error actualizando la información familiar.';
       return response;
     }
   }
@@ -369,7 +372,7 @@ export class MemberProvider {
           if (filterMinistryStudies.length === 0) {
             
             response.isSuccessful = false;
-            response.message = "Información académica inválida"
+            response.message = "Información de estudios ministeriales inválida"
             
             return response;
           }
@@ -419,7 +422,9 @@ export class MemberProvider {
   
         response.isSuccessful = false;
         response.message =
-            'Error actualizando la información académica.';
+            'Información de estudios ministeriales inválida.';
+
+         return response;
       }
 
       response.data = await this.memberModel.findOne({
@@ -431,7 +436,7 @@ export class MemberProvider {
     } catch (error) {
       response.isSuccessful = false;
       response.message =
-          'Error actualizando la información académica.';
+          'Información de estudios ministeriales inválida.';
       return response;
     }
   }
@@ -439,6 +444,13 @@ export class MemberProvider {
   async updateWorkfronts(memberId:string, workfrontData: MemberWorkFrontDto) : Promise<GeneralResponse> {
 
     let response: GeneralResponse = { isSuccessful: true };
+
+    if (!workfrontData.workFrontId) {
+      response.isSuccessful = false;
+      response.message =
+          'Debe seleccionar un frente de trabajo válido.';
+      return response
+    }
 
     try {
       const existingMember = await this.memberModel.findOne({
@@ -460,7 +472,7 @@ export class MemberProvider {
           if (filterWorkfronts.length === 0) {
             
             response.isSuccessful = false;
-            response.message = "Información académica inválida"
+            response.message = "Información de frentes de trabajo inválida"
             
             return response;
           }
@@ -477,7 +489,8 @@ export class MemberProvider {
                 "workFronts.$.endDate": workfrontData.endDate,
                 "workFronts.$.role": workfrontData.role,
                 "workFronts.$.status": workfrontData.status,
-                "workFronts.$.comments": workfrontData.comments
+                "workFronts.$.comments": workfrontData.comments,
+                "workFronts.$.workFrontId": workfrontData.workFrontId
               }
             }
           );
@@ -490,7 +503,8 @@ export class MemberProvider {
             endDate: workfrontData.endDate,
             role: workfrontData.role,
             status: workfrontData.status,
-            comments: workfrontData.comments
+            comments: workfrontData.comments,
+            workFrontId: workfrontData.workFrontId
           }
   
 
@@ -513,7 +527,9 @@ export class MemberProvider {
   
         response.isSuccessful = false;
         response.message =
-            'Error actualizando la información académica.';
+            'Error actualizando la información de frentes de trabajo';
+
+        return response;
       }
 
       response.data = await this.memberModel.findOne({
@@ -525,7 +541,7 @@ export class MemberProvider {
     } catch (error) {
       response.isSuccessful = false;
       response.message =
-          'Error actualizando la información académica.';
+          'Error actualizando la información de frentes de trabajo.';
       return response;
     }
   }

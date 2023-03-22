@@ -50,6 +50,10 @@ class MemberWorkFront {
  @Prop()
  name: string;  
 
+ 
+ @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Workfront' })
+ workFrontId: string;
+
   @Prop()
   role: string;
 
