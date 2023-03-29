@@ -133,7 +133,7 @@ export class Members {
   @Prop({ required: true })
   address: string;
 
-  @Prop({ required: true })
+  @Prop()
   housingType: string;
 
   @Prop()
@@ -145,10 +145,10 @@ export class Members {
   @Prop({ required: true })
   email: string;
 
-  @Prop({ required: true })
+  @Prop()
   birthDate : Date;
 
-  @Prop({ required: true })
+  @Prop()
   maritalStatus : string;
 
   @Prop()
@@ -160,13 +160,13 @@ export class Members {
   @Prop({type: [RelativeSchema], default: []})
   relatives : [Relative]
 
-  @Prop({ required: true })
+  @Prop()
   occupation : string;
 
-  @Prop({ required: true })
+  @Prop()
   conversionyear: number;
 
-  @Prop({ required: true })
+  @Prop()
   yearInChurch: number;
 
   @Prop()
