@@ -38,6 +38,16 @@ export class UserProvider {
     );
   }
 
+  async updatePassword(userId: string, newPassword: string) {
+
+    return this.userModel.updateOne(
+      {
+        _id: userId,
+      },
+      {password: newPassword}
+    );
+  }
+
   async deleteUser(id: string) {
     this.userModel.deleteOne({
       _id: id,
