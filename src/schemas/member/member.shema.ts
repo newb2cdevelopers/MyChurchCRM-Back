@@ -138,7 +138,7 @@ export class Members {
   @Prop({ required: true })
   mobilePhone: string;
 
-  @Prop({ required: true })
+  @Prop()
   email: string;
 
   @Prop()
