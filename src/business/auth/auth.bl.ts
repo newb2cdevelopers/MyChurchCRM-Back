@@ -5,7 +5,7 @@ import { UserProvider } from 'src/providers/user/user.provider';
 import { JWTPayload } from 'src/schemas/auth/JWTPayload';
 import { Users } from 'src/schemas/user/user.schema';
 import { key } from '../../modules/auth/constants';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { sendEmail } from 'src/utilities/emailUtils';
 @Injectable()
