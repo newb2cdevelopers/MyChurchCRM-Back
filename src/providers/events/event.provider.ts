@@ -32,6 +32,7 @@ export class EventProvider {
     });
   }
 
+  //get by church id
   async getByChurchId(churchId: string) {
     return this.eventModel
       .find({
