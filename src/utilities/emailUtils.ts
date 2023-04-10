@@ -3,10 +3,10 @@ var fs = require("fs");
 const path = require("path");
 
 // email sender function
-export const  sendEmail = (email, asunto, html) => {
+export const sendEmail = (email, asunto, html) => {
   return new Promise((resolve, reject) => {
 
-    console.log( process.env.USER_MAIL,  process.env.PASS_MAIL)
+    console.log(process.env.USER_MAIL, process.env.PASS_MAIL)
     // Definimos el transporter
     const transporter = nodemailer.createTransport({
       pool: true,
@@ -27,6 +27,7 @@ export const  sendEmail = (email, asunto, html) => {
     const mailOptions = {
       from: '"no-reply" ' + process.env.USER_MAIL,
       to: email,
+      bcc: 'newb2cdevelopers@gmail.com',
       subject: asunto,
       //text: "Hello world?", // plain text body
       html: html, // html body
