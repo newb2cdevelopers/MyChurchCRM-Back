@@ -143,7 +143,8 @@ export class MemberProvider {
               conversionyear: updatedMember.conversionyear,
               isBaptised: updatedMember.isBaptised,
               yearInChurch: updatedMember.yearInChurch,
-              documentType: updatedMember.documentType
+              documentType: updatedMember.documentType,
+              email: updatedMember.email
             },
           },
         );
