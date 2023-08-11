@@ -9,6 +9,7 @@ import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { Booking as BookingS, BookingDocument } from 'src/schemas/bookings/booking.schema';
 import { Attendee, AttendeeTextDocument } from 'src/schemas/attendee/attendee.schema';
 import { BulkLoadResponse } from 'src/dtos/BulkLoadResponse';
+import * as moment from 'moment';
 
 @Injectable()
 export class EventProvider {
@@ -19,6 +20,41 @@ export class EventProvider {
 
   async newEvent(event: EventDTO) {
     return this.eventModel.create(event);
+  }
+
+  async closePastEvents() {
+    const start = moment().startOf('day').toDate();
+
+    const openEvent = await this.eventModel
+      .find({
+        date: {
+          $lte: start,
+        },
+        status: 'Pendiente',
+      })
+      .exec();
+
+    await Promise.all(
+      openEvent.map(async (event) => {
+        try {
+          await this.eventModel.updateOne(
+            {
+              _id: event._id,
+            },
+            {
+              $set: {
+                isBookingAvailable: false,
+                status: 'Cerrado',
+              },
+            },
+          );
+        } catch (error) {
+          console.log(error);
+        }
+      }),
+    );
+
+    console.log('Corriendo cron a las 8:00 am');
   }
 
   async getAll() {
