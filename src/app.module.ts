@@ -11,6 +11,12 @@ import { MemberModule } from './modules/member/member.module';
 import { RoleModule } from './modules/role/role.module';
 import { FunctionalityModule } from './modules/functionality/functionality.module';
 import { ModuleLocalModule } from './modules/module/module.module';
+import { CronService } from '../src/services/cron/cron.service';
+import { EventProvider } from './providers/events/event.provider';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Booking, BookingSchema } from 'src/schemas/bookings/booking.schema';
+import { Attendee, AttendeeSchema } from 'src/schemas/attendee/attendee.schema';
+import { Events, EventSchema } from 'src/schemas/events/event.shema';
 
 @Module({
   imports: [
@@ -25,7 +31,13 @@ import { ModuleLocalModule } from './modules/module/module.module';
     RoleModule,
     FunctionalityModule,
     ModuleLocalModule,
-    WorkfrontModule
+    WorkfrontModule,
+    MongooseModule.forFeature([{ name: Events.name, schema: EventSchema }]),
+    MongooseModule.forFeature([{ name: Booking.name, schema: BookingSchema }]),
+    MongooseModule.forFeature([
+      { name: Attendee.name, schema: AttendeeSchema },
+    ]),
   ],
+  providers: [EventProvider, CronService],
 })
 export class AppModule {}
