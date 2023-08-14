@@ -32,6 +32,9 @@ export class MemberGeneralInfoDto {
     @ApiProperty({ type: String })
     occupation: string;
 
+    @ApiProperty({ type: String })
+    email: string;
+
     @ApiProperty({ type: Number })
     conversionyear: Number;
 
