@@ -86,11 +86,11 @@ export class EventController {
     return await this.eventBL.getBookingsByDocument(documentNumber);
   }
 
-  @Get('AllBookingsByDocument/:documentNumber')
+  @Get('AllBookingsByDocument/:searchCriteria')
   async getAllBookingsByDocument(
-    @Param('documentNumber') documentNumber: string,
+    @Param('searchCriteria') searchCriteria: string,
   ): Promise<Booking[]> {
-    return await this.eventBL.getAllBookingsByDocument(documentNumber);
+    return await this.eventBL.getAllBookingsByDocument(searchCriteria);
   }
 
   @Get('getEventById/:eventId')
