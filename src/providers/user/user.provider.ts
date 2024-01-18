@@ -26,7 +26,11 @@ export class UserProvider {
 
   async newUser(user: UserDTO) {
     const confirmToken = nanoid(32);
-    return this.userModel.create({ ...user, confirmToken });
+    return this.userModel.create({
+      ...user,
+      confirmToken,
+      workfront: null,
+    });
   }
 
   async updateUser(id: string, user: UserDTO) {

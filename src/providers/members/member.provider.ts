@@ -94,6 +94,8 @@ export class MemberProvider {
 
       }
 
+      member.workfront = null;
+
       const newMember = await this.memberModel.create(member);
       response.data = newMember;
 
