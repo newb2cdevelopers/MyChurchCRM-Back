@@ -11,8 +11,22 @@ export class MemberProvider {
     @InjectModel(Members.name) private memberModel: Model<MemberDocument>,
   ) { }
 
-  async getAllMembers(churchId: string = null) {
+  async getAllMembers(churchId: string = null, workfrontId: string = null) {
     if (churchId) {
+
+      if (workfrontId) {
+        return this.memberModel.find({
+          churchId: churchId,
+          workfront: workfrontId
+        }).populate({
+          path: "workFronts",
+          model: "MemberWorkFront",
+          populate: {
+            path: "workFrontId",
+            model: "Workfront"
+          }
+        })
+      }
       return this.memberModel.find({
         churchId: churchId
       }).populate({
@@ -22,6 +36,12 @@ export class MemberProvider {
           path: "workFrontId",
           model: "Workfront"
         }
+      })
+    }
+
+    if (workfrontId) {
+      return this.memberModel.find({
+        workfront: workfrontId
       })
     }
 
@@ -93,8 +113,6 @@ export class MemberProvider {
         }
 
       }
-
-      member.workfront = null;
 
       const newMember = await this.memberModel.create(member);
       response.data = newMember;

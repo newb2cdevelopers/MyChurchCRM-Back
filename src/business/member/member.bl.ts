@@ -8,8 +8,8 @@ import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 export class MemberBusiness {
   constructor(private readonly provider: MemberProvider) {}
 
-  async getAllMembers(churchId : string = null): Promise<Members[]> {
-    return this.provider.getAllMembers(churchId) as unknown as Promise<Members[]>;
+  async getAllMembers(churchId : string = null, workfrontId: string = null): Promise<Members[]> {
+    return this.provider.getAllMembers(churchId, workfrontId) as unknown as Promise<Members[]>;
   }
 
   async getMemberByIdOrDocument(isSearchById : Boolean, identifier: string ): Promise< Members > {
