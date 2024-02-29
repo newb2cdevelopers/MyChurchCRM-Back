@@ -6,6 +6,13 @@ import * as bcrypt from 'bcryptjs';
 export class Users {
   _id: number;
 
+  @Prop({
+    required: false,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workfront',
+  })
+  workfront: string;
+
   @Prop({ required: true, unique: true })
   email: string;
 

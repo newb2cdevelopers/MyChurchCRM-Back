@@ -101,10 +101,14 @@ export class AuthBusiness {
     const user = (await this.provider.getUserByEmail(name, true)) as unknown as Users;
     const payload: JWTPayload = { userId: user.email };
 
+    console.log(user);
+    
+
     return {
       access_token: this.jwtService.sign(payload),
       churchId: user.churchId,
-      roles: this.generateDashboardInfo(user.roles)
+      roles: this.generateDashboardInfo(user.roles),
+      workfront: user.workfront || null,
     };
   }
 

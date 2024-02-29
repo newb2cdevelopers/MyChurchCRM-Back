@@ -1,19 +1,33 @@
-import { Body, Controller, Get, Post, Put, Request, Param, NotFoundException, InternalServerErrorException, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Request, Param, NotFoundException, InternalServerErrorException, Query, UseGuards } from '@nestjs/common';
+import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { Members } from 'src/schemas/member/member.shema';
-import { ApiBody, ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiCreatedResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { MemberBusiness } from 'src/business/member/member.bl';
 import { MemberGeneralInfoDto, AdditionalAcademicStudyDto, RelativeDto, MemberMinistryStudyDto, MemberWorkFrontDto } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
+import { MAINWORKFRONTID } from 'src/Constants';
 @ApiTags('Members')
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberBusiness: MemberBusiness) {}
 
+  @UseGuards(AuthGuard)
   @Get()
   @ApiCreatedResponse({ description: 'Member Info' })
-  async getMembers(@Query() query): Promise< Members [] > {
+  async getMembers(@Query() query, @Request() req): Promise< Members [] > {
     
-    return  await this.memberBusiness.getAllMembers(query && query.churchId);
+
+    let workfrontId = req.user.workfront &&  req.user.workfront.toString();
+
+    if (!workfrontId) {
+      return []; 
+    }
+
+    if ( workfrontId === MAINWORKFRONTID) {
+      workfrontId = null;
+    }
+
+    return  await this.memberBusiness.getAllMembers(query && query.churchId, workfrontId);
   }
 
   @Get("getMemberByIdentifier/:isSearchById/:identifier")

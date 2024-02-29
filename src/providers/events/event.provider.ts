@@ -268,22 +268,52 @@ export class EventProvider {
       return bookingsQuery;
   }
 
-  async getAllBookingsByDocument(documentNumber: string): Promise<BookingS[]> {
+  async getAllBookingsByDocument(searchCriteria: string): Promise<BookingS[]> {
+    let existingAttendee = null;
 
-    const existingAttendee =  await this.attendeeModel.findOne({
-      documentNumber: documentNumber
-    });
+    const regex = /^\d+$/;
 
-    if (!existingAttendee) {
-      return []
+    const onlyNumbers = regex.test(searchCriteria);
+
+    if (onlyNumbers) {
+      existingAttendee = await this.attendeeModel.findOne({
+        documentNumber: searchCriteria,
+      });
+    } else {
+      const regex = new RegExp(searchCriteria, 'i');
+
+      existingAttendee = await this.attendeeModel.find({
+        name: { $regex: regex },
+      });
     }
 
-    const bookingsQuery = await this.bookingModel.find(
-      {
-        atendee : existingAttendee._id,
-      }).populate("eventId").populate("atendee");
+    if (!existingAttendee) {
+      return [];
+    }
 
-      return bookingsQuery;
+    let bookingsQuery = [];
+
+    if (onlyNumbers) {
+      bookingsQuery = await this.bookingModel
+        .find({
+          atendee: existingAttendee._id,
+        })
+        .populate('eventId')
+        .populate('atendee');
+    } else {
+      const atendeeIds = existingAttendee.map((atendee) => {
+        return atendee._id;
+      });
+
+      bookingsQuery = await this.bookingModel
+        .find({
+          atendee: { $in: atendeeIds },
+        })
+        .populate('eventId')
+        .populate('atendee');
+    }
+
+    return bookingsQuery;
   }
 
   async getEventById(eventId: string): Promise<Events> {

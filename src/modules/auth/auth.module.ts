@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { AuthBusiness } from 'src/business/auth/auth.bl';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthController } from 'src/controllers/auth/auth.controller';
@@ -13,6 +13,7 @@ import { AuthGoogleController } from 'src/controllers/auth/auth.google.controlle
 import { AuthGoogleBusiness } from 'src/business/auth/google.auth.bl';
 import { UserProvider } from 'src/providers/user/user.provider';
 
+@Global()
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Users.name, schema: UserSchema }]),
@@ -31,5 +32,6 @@ import { UserProvider } from 'src/providers/user/user.provider';
     JwtStrategy,
     GoogleStrategy,
   ],
+  exports: [AuthProvider, JwtModule]
 })
 export class AuthModule {}

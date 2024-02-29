@@ -73,8 +73,8 @@ export class EventBusiness {
     return this.provider.getBookingsByDocument(documentNumber) as unknown as Promise<BookingS[]>;
   }
 
-  async getAllBookingsByDocument(documentNumber:string): Promise<Booking[]> {
-    return this.provider.getAllBookingsByDocument(documentNumber) as unknown as Promise<Booking[]>;
+  async getAllBookingsByDocument(searchCriteria:string): Promise<Booking[]> {
+    return this.provider.getAllBookingsByDocument(searchCriteria) as unknown as Promise<Booking[]>;
   }
 
   async getEventById(eventId:string) : Promise<Events> {

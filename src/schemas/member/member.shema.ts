@@ -175,7 +175,14 @@ export class Members {
   churchId: string;
 
   @Prop({type: [MemberWorkFrontSchema], default: []})
-  workFronts: [MemberWorkFront]
+  workFronts: [MemberWorkFront];
+
+  @Prop({
+    required: false,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workfront',
+  })
+  workfront: string;
 }
 
 export type MemberDocument = Members & mongoose.Document;
