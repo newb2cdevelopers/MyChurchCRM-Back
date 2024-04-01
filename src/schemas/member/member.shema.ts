@@ -183,6 +183,9 @@ export class Members {
     ref: 'Workfront',
   })
   workfront: string;
+
+  @Prop()
+  comments : string;
 }
 
 export type MemberDocument = Members & mongoose.Document;

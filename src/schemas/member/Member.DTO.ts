@@ -43,6 +43,12 @@ export class MemberGeneralInfoDto {
 
     @ApiProperty({ type: Boolean })
     isBaptised: Boolean;
+
+    @ApiProperty({ type: String })
+    workfront: string;
+
+    @ApiProperty({ type: String })
+    comments: string;
   }
 
   export class AdditionalAcademicStudyDto {
