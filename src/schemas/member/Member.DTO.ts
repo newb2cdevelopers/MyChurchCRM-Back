@@ -47,6 +47,8 @@ export class MemberGeneralInfoDto {
     @ApiProperty({ type: String })
     workfront: string;
 
+  // new property in general info
+
     @ApiProperty({ type: String })
     comments: string;
   }
