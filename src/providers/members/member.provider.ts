@@ -19,23 +19,15 @@ export class MemberProvider {
           churchId: churchId,
           workfront: workfrontId
         }).populate({
-          path: "workFronts",
-          model: "MemberWorkFront",
-          populate: {
-            path: "workFrontId",
-            model: "Workfront"
-          }
+          path: "workfront",
+          model: "Workfront",
         })
       }
       return this.memberModel.find({
         churchId: churchId
       }).populate({
-        path: "workFronts",
-        model: "MemberWorkFront",
-        populate: {
-          path: "workFrontId",
-          model: "Workfront"
-        }
+        path: "workfront",
+        model: "Workfront",
       })
     }
 
@@ -54,24 +46,16 @@ export class MemberProvider {
       return await this.memberModel.findOne({
         _id: identifier,
       }).populate({
-        path: "workFronts",
-        model: "MemberWorkFront",
-        populate: {
-          path: "workFrontId",
-          model: "Workfront"
-        }
+        path: "workfront",
+        model: "Workfront",
       });
     }
 
     return await this.memberModel.findOne({
       documentNumber: identifier,
     }).populate({
-      path: "workFronts",
-      model: "MemberWorkFront",
-      populate: {
-        path: "workFrontId",
-        model: "Workfront"
-      }
+      path: "workfront",
+      model: "Workfront",
     });
   }
 
@@ -164,7 +148,9 @@ export class MemberProvider {
               isBaptised: updatedMember.isBaptised,
               yearInChurch: updatedMember.yearInChurch,
               documentType: updatedMember.documentType,
-              email: updatedMember.email
+              email: updatedMember.email,
+              workfront : updatedMember.workfront,
+              comments: updatedMember.comments
             },
           },
         );
@@ -172,12 +158,8 @@ export class MemberProvider {
         response.data = await this.memberModel.findOne({
           _id: memberId,
         }).populate({
-          path: "workFronts",
-          model: "MemberWorkFront",
-          populate: {
-            path: "workFrontId",
-            model: "Workfront"
-          }
+          path: "workfront",
+          model: "Workfront",
         });
 
         return response;
@@ -277,12 +259,8 @@ export class MemberProvider {
       response.data = await this.memberModel.findOne({
         _id: memberId,
       }).populate({
-        path: "workFronts",
-        model: "MemberWorkFront",
-        populate: {
-          path: "workFrontId",
-          model: "Workfront"
-        }
+        path: "workfront",
+        model: "Workfront",
       });
 
       return response;
@@ -393,12 +371,8 @@ export class MemberProvider {
       response.data = await this.memberModel.findOne({
         _id: memberId,
       }).populate({
-        path: "workFronts",
-        model: "MemberWorkFront",
-        populate: {
-          path: "workFrontId",
-          model: "Workfront"
-        }
+        path: "workfront",
+        model: "Workfront",
       });
 
       return response;
@@ -493,12 +467,8 @@ export class MemberProvider {
       response.data = await this.memberModel.findOne({
         _id: memberId,
       }).populate({
-        path: "workFronts",
-        model: "MemberWorkFront",
-        populate: {
-          path: "workFrontId",
-          model: "Workfront"
-        }
+        path: "workfront",
+        model: "Workfront",
       });
 
       return response;
@@ -603,12 +573,8 @@ export class MemberProvider {
       response.data = await this.memberModel.findOne({
         _id: memberId,
       }).populate({
-        path: "workFronts",
-        model: "MemberWorkFront",
-        populate: {
-          path: "workFrontId",
-          model: "Workfront"
-        }
+        path: "workfront",
+        model: "Workfront",
       });
 
       return response;
