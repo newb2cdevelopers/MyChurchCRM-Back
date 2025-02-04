@@ -17,6 +17,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Booking, BookingSchema } from 'src/schemas/bookings/booking.schema';
 import { Attendee, AttendeeSchema } from 'src/schemas/attendee/attendee.schema';
 import { Events, EventSchema } from 'src/schemas/events/event.shema';
+import { ZoneModule } from './modules/zone/zone.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { Events, EventSchema } from 'src/schemas/events/event.shema';
     AttendeeModule,
     MemberModule,
     RoleModule,
+    ZoneModule,
     FunctionalityModule,
     ModuleLocalModule,
     WorkfrontModule,
