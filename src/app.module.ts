@@ -18,6 +18,8 @@ import { Booking, BookingSchema } from 'src/schemas/bookings/booking.schema';
 import { Attendee, AttendeeSchema } from 'src/schemas/attendee/attendee.schema';
 import { Events, EventSchema } from 'src/schemas/events/event.shema';
 import { ZoneModule } from './modules/zone/zone.module';
+import { LocalityModule } from './modules/locality/locality.module';
+import { NeighborhoodModule } from './modules/neighborhood/neighborhood.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { ZoneModule } from './modules/zone/zone.module';
     MemberModule,
     RoleModule,
     ZoneModule,
+    LocalityModule,
+    NeighborhoodModule,
     FunctionalityModule,
     ModuleLocalModule,
     WorkfrontModule,
