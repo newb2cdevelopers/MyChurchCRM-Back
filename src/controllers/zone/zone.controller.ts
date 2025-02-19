@@ -15,6 +15,7 @@ export class ZoneController {
   }
 
   @Post()
+  @ApiBody({ type: Zone, description: 'Zone Info' })
   async newZone(@Body() zone: Zone, @Request() req): Promise<Zone> {
     return await this.zoneBusiness.createZone(zone);
   }

@@ -39,7 +39,7 @@ export class FamilyGroupProvider {
     try {
 
       const existinGroup = await this.familyGroupModel.findOne({
-        documentNumber: familyGroup.code,
+        code: familyGroup.code,
       });
 
       if (existinGroup) {
@@ -91,8 +91,10 @@ export class FamilyGroupProvider {
       return response; 
     };
 
+    var id = familyGroup._id;
+
     const existingGroup = await this.familyGroupModel.findOne({
-      id: familyGroup._id,
+      id: id,
     });
 
     if (!existingGroup) {
@@ -121,13 +123,29 @@ export class FamilyGroupProvider {
       return response;
     }; 
     
-    familyGroup.code = existingGroup.code;
 
-    const updateGroup = await this.familyGroupModel.findOneAndUpdate({
-      id: familyGroup._id,
-    }, familyGroup);
+    console.log(existingGroup);
+    console.log(id);
+    console.log(familyGroup);
+    
+    await this.familyGroupModel.updateOne(
+      {
+        _id: id,
+      },
+      {
+        $set: {
+          leader: familyGroup.leader,
+          neighborhood: familyGroup.neighborhood,
+          address: familyGroup.address,
+          time: familyGroup.time,
+          day: familyGroup.day,
+          startDate: familyGroup.startDate,
+          status: familyGroup.status
+        },
+      }
+    );
 
-    response.data = updateGroup;  
+    response.data = await this.familyGroupModel.findById(id).populate(["leader", "neighborhood"]);  
 
     return response;
   }
