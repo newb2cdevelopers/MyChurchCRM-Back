@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { FamilyGroup, FamilyGroupAttendance } from 'src/schemas/familyGroup/familyGroup.schema';
+import { FamilyGroup, FamilyGroupAttendance, FamilyGroupMember } from 'src/schemas/familyGroup/familyGroup.schema';
 import { FamilyGroupProvider } from 'src/providers/familiyGroup/familyGroup.provider';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 
@@ -27,5 +27,9 @@ export class FamilyGroupBusiness {
 
   async registerFamilyGroupAttendance(attendance: FamilyGroupAttendance):  Promise<GeneralResponse> {
     return this.provider.registerFamilyGroupAttendance(attendance) as unknown as  Promise<GeneralResponse>;
+  }
+
+  async registerFamilyGroupMember(familyGroupId: string, familyMemberData: FamilyGroupMember):  Promise<GeneralResponse> {
+    return this.provider.registerFamilyGroupMember(familyGroupId,familyMemberData) as unknown as  Promise<GeneralResponse>;
   }
 }

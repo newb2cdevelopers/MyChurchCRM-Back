@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Put, Request, Param, NotFoundException, In
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 
 import { FamilyGroupBusiness } from 'src/business/familyGroup/familyGroup.bl';
-import { FamilyGroup, FamilyGroupAttendance } from 'src/schemas/familyGroup/familyGroup.schema';
+import { FamilyGroup, FamilyGroupAttendance, FamilyGroupMember } from 'src/schemas/familyGroup/familyGroup.schema';
 
 import { ApiBody, ApiCreatedResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
@@ -32,7 +32,7 @@ export class FamiliyGroupController {
 
   @Get("attendanceByGroup/:familyGroupId")
   @ApiCreatedResponse({ description: 'Family Group Attendance Info' })
-  async getFamilyGroupAttendance(@Query() query, @Request() req, @Param('familyGroupId') familyGroupId: string,): Promise< FamilyGroupAttendance [] > {
+  async getFamilyGroupAttendance(@Query() query, @Request() req, @Param('familyGroupId') familyGroupId: string): Promise< FamilyGroupAttendance [] > {
     
     return  await this.familyGroupBusiness.getFamilyGroupAttendance(familyGroupId);
   }
@@ -42,5 +42,9 @@ export class FamiliyGroupController {
   async RegisterFamiliyGroupAttendance(@Body() familyGroupAttendance: FamilyGroupAttendance, @Request() req):  Promise<GeneralResponse> {
     return await this.familyGroupBusiness.registerFamilyGroupAttendance(familyGroupAttendance);
   }
-
+  
+  @Post("registerFamilyGroupMember/:familyGroupId")
+  async RegisterFamiliyGroupMemeber(@Body() familyGroupMember: FamilyGroupMember, @Request() req, @Param('familyGroupId') familyGroupId: string):  Promise<GeneralResponse> {
+    return await this.familyGroupBusiness.registerFamilyGroupMember(familyGroupId, familyGroupMember);
+  }
 }
