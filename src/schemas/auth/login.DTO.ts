@@ -62,3 +62,18 @@ export class recoveryEmailUpdateDTO {
   })
   newPassword: string;
 }
+
+/**
+ * DTO for refreshing access token
+ * Used to obtain a new access token using a valid refresh token
+ */
+export class RefreshTokenDTO {
+  @ApiProperty({
+    type: String,
+    description: 'Refresh token obtained during login',
+    example: 'a1b2c3d4e5f6...',
+  })
+  @IsNotEmpty({ message: 'Refresh token is required' })
+  @IsString()
+  refresh_token: string;
+}

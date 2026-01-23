@@ -2,11 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthProvider } from 'src/providers/auth/auth.provider';
 import { UserProvider } from 'src/providers/user/user.provider';
+import { RefreshTokenProvider } from 'src/providers/auth/refreshToken.provider';
 import { JWTPayload } from 'src/schemas/auth/JWTPayload';
 import { Users } from 'src/schemas/user/user.schema';
 import { key } from '../../modules/auth/constants';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { sendEmail } from 'src/utilities/emailUtils';
+import * as crypto from 'crypto';
 import {
   UserNotFoundException,
   InvalidTokenException,
@@ -28,6 +30,7 @@ export class AuthBusiness {
   constructor(
     private readonly provider: AuthProvider,
     private readonly userProvider: UserProvider,
+    private readonly refreshTokenProvider: RefreshTokenProvider,
     private jwtService: JwtService,
   ) {}
 
@@ -181,20 +184,166 @@ export class AuthBusiness {
     }
   }
 
-  async generateAccessToken(name: string) {
+  /**
+   * Generates access token and refresh token for user login
+   * @param name - User's email
+   * @param ipAddress - Client's IP address (optional, for auditing)
+   * @param userAgent - Client's user agent (optional, for auditing)
+   * @returns Object with access_token (1h), refresh_token (7d), user info
+   */
+  async generateAccessToken(
+    name: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
     const user = (await this.provider.getUserByEmail(
       name,
       true,
     )) as unknown as Users;
+
+    // Generate access token (1 hour duration)
     const payload: JWTPayload = { userId: user.email };
+    const access_token = this.jwtService.sign(payload, {
+      expiresIn: '1h', // Changed from 3h to 1h
+      secret: key,
+    });
+
+    // Generate refresh token (7 days duration)
+    const refreshToken = crypto.randomBytes(64).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // Save refresh token in database
+    await this.refreshTokenProvider.createRefreshToken({
+      token: refreshToken,
+      userId: user._id.toString(),
+      expiresAt,
+      ipAddress,
+      userAgent,
+    });
+
+    this.logger.log(`Tokens generated for user: ${user.email}`);
 
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token,
+      refresh_token: refreshToken,
       churchId: user.churchId,
       roles: this.generateDashboardInfo(
         user.roles as unknown as RoleWithFunctionalities[],
       ),
       workfront: user.workfront || null,
+    };
+  }
+
+  /**
+   * Refreshes access token using a valid refresh token
+   * @param refreshToken - The refresh token string
+   * @returns New access token with user info
+   * @throws InvalidTokenException if refresh token is invalid, revoked, or expired
+   * @throws UserNotFoundException if user doesn't exist
+   */
+  async refreshAccessToken(refreshToken: string) {
+    // Find refresh token in database
+    const tokenDoc = await this.refreshTokenProvider.findByToken(refreshToken);
+
+    if (!tokenDoc) {
+      this.logger.warn('Refresh token not found in database');
+      throw new InvalidTokenException('Invalid refresh token');
+    }
+
+    // Validate token is not revoked
+    if (tokenDoc.isRevoked) {
+      this.logger.warn(
+        `Attempted to use revoked refresh token for user: ${tokenDoc.userId}`,
+      );
+      throw new InvalidTokenException('Refresh token has been revoked');
+    }
+
+    // Validate token is not expired
+    if (tokenDoc.expiresAt < new Date()) {
+      this.logger.warn(
+        `Attempted to use expired refresh token for user: ${tokenDoc.userId}`,
+      );
+      throw new InvalidTokenException('Refresh token has expired');
+    }
+
+    // Get user information
+    const user = (await this.provider.getUserByEmail(
+      (tokenDoc.userId as any).email,
+      true,
+    )) as unknown as Users;
+
+    if (!user) {
+      this.logger.error(
+        `User not found for valid refresh token: ${tokenDoc.userId}`,
+      );
+      throw new UserNotFoundException();
+    }
+
+    // Verify user is still active
+    if (!user.active) {
+      this.logger.warn(
+        `Attempted to refresh token for inactive user: ${user.email}`,
+      );
+      throw new InactiveUserException();
+    }
+
+    // Generate new access token (1 hour)
+    const payload: JWTPayload = { userId: user.email };
+    const access_token = this.jwtService.sign(payload, {
+      expiresIn: '1h',
+      secret: key,
+    });
+
+    this.logger.log(`Access token refreshed for user: ${user.email}`);
+
+    return {
+      access_token,
+      churchId: user.churchId,
+      roles: this.generateDashboardInfo(
+        user.roles as unknown as RoleWithFunctionalities[],
+      ),
+      workfront: user.workfront || null,
+    };
+  }
+
+  /**
+   * Revokes a refresh token (logout from specific device)
+   * @param refreshToken - Token to revoke
+   * @returns GeneralResponse indicating success
+   * @throws InvalidTokenException if token not found
+   */
+  async revokeRefreshToken(refreshToken: string): Promise<GeneralResponse> {
+    const result = await this.refreshTokenProvider.revokeToken(refreshToken);
+
+    if (result.modifiedCount === 0) {
+      this.logger.warn('Attempted to revoke non-existent refresh token');
+      throw new InvalidTokenException('Refresh token not found');
+    }
+
+    this.logger.log(`Refresh token revoked successfully`);
+
+    return {
+      isSuccessful: true,
+      message: 'Logout successful',
+    };
+  }
+
+  /**
+   * Revokes all refresh tokens for a user (logout from all devices)
+   * @param userId - User's MongoDB ObjectId
+   * @returns GeneralResponse with number of tokens revoked
+   */
+  async revokeAllUserTokens(userId: string): Promise<GeneralResponse> {
+    const result = await this.refreshTokenProvider.revokeAllUserTokens(userId);
+
+    this.logger.log(
+      `Revoked ${result.modifiedCount} refresh tokens for user: ${userId}`,
+    );
+
+    return {
+      isSuccessful: true,
+      message: `Logged out from ${result.modifiedCount} devices`,
     };
   }
 
