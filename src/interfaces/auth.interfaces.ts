@@ -35,3 +35,14 @@ export interface GroupedFunctionality {
   module: string;
   accesses: FunctionalityWithModule[];
 }
+
+/**
+ * Login/Registration response structure with tokens and user info
+ */
+export interface AuthTokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  churchId?: string;
+  roles?: GroupedFunctionality[];
+  workfront?: unknown;
+}

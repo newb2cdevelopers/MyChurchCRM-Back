@@ -41,6 +41,6 @@ import { UserProvider } from 'src/providers/user/user.provider';
     JwtStrategy,
     GoogleStrategy,
   ],
-  exports: [AuthProvider, JwtModule],
+  exports: [AuthProvider, AuthBusiness, RefreshTokenProvider, JwtModule],
 })
 export class AuthModule {}

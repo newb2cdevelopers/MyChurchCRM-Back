@@ -267,9 +267,22 @@ export class AuthBusiness {
       throw new InvalidTokenException('Refresh token has expired');
     }
 
-    // Get user information
+    // Get user information with populated roles and functionalities
+    // First get user by ID to get the email
+    const userBasic = await this.userProvider.getUserById(tokenDoc.userId);
+    
+    if (!userBasic) {
+      this.logger.error(
+        `User not found for valid refresh token: ${tokenDoc.userId}`,
+      );
+      throw new UserNotFoundException();
+    }
+    
+    const userBasicData = userBasic as unknown as Users;
+    
+    // Now get full user data with populated relations using email
     const user = (await this.provider.getUserByEmail(
-      (tokenDoc.userId as any).email,
+      userBasicData.email,
       true,
     )) as unknown as Users;
 

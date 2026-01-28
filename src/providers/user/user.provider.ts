@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { nanoid } from 'nanoid';
@@ -7,6 +7,8 @@ import { Users, UserDocument } from 'src/schemas/user/user.schema';
 
 @Injectable()
 export class UserProvider {
+  private readonly logger = new Logger(UserProvider.name);
+
   constructor(
     @InjectModel(Users.name) private userModel: Model<UserDocument>,
   ) {}
@@ -20,16 +22,42 @@ export class UserProvider {
   }
 
   async getUserByEmail(email: string) {
-    return this.userModel.findOne({ email }).select('-__v -confirmToken');
+    this.logger.log(`[getUserByEmail] Searching for user with email: ${email}`);
+    const user = await this.userModel
+      .findOne({ email })
+      .select('-__v -confirmToken');
+    if (user) {
+      this.logger.log(`[getUserByEmail] User found with ID: ${user._id}`);
+    } else {
+      this.logger.log(`[getUserByEmail] No user found with email: ${email}`);
+    }
+    return user;
   }
 
   async newUser(user: UserDTO) {
+    this.logger.log(`[newUser] Creating new user with email: ${user.email}`);
     const confirmToken = nanoid(32);
-    return this.userModel.create({
-      ...user,
-      confirmToken,
-      workfront: null,
-    });
+    this.logger.log(
+      `[newUser] Generated confirmation token for user: ${user.email}`,
+    );
+
+    try {
+      const createdUser = await this.userModel.create({
+        ...user,
+        confirmToken,
+        workfront: null,
+      });
+      this.logger.log(
+        `[newUser] User created successfully in database with ID: ${createdUser._id}`,
+      );
+      return createdUser;
+    } catch (error) {
+      this.logger.error(
+        `[newUser] Database error creating user: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
   }
 
   async updateUser(id: string, user: UserDTO) {
