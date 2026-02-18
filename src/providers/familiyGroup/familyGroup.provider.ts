@@ -31,6 +31,23 @@ export class FamilyGroupProvider {
   ) {}
 
   async getAllFamilyGroups(churchId: string = null) {
+    console.log(churchId);
+
+    if (churchId) {
+      // Find all members that belong to the specified church
+      const membersInChurch = await this.memberModel
+        .find({ churchId })
+        .select('_id');
+      const memberIds = membersInChurch.map((member) => member._id);
+
+      console.log(memberIds);
+
+      // Filter family groups where the leader is one of the members from that church
+      return this.familyGroupModel
+        .find({ leader: { $in: memberIds } })
+        .populate(['leader', 'neighborhood']);
+    }
+
     return this.familyGroupModel.find().populate(['leader', 'neighborhood']);
   }
 
