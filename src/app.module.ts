@@ -18,12 +18,16 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Booking, BookingSchema } from 'src/schemas/bookings/booking.schema';
 import { Attendee, AttendeeSchema } from 'src/schemas/attendee/attendee.schema';
 import { Members, MemberSchema } from './schemas/member/member.shema';
-import { Neighborhood, NeighborhoodSchema } from './schemas/neighborhood/neighborhood.schema';
+import {
+  Neighborhood,
+  NeighborhoodSchema,
+} from './schemas/neighborhood/neighborhood.schema';
 import { Users, UserSchema } from './schemas/user/user.schema';
 import { Events, EventSchema } from 'src/schemas/events/event.shema';
 import { ZoneModule } from './modules/zone/zone.module';
 import { LocalityModule } from './modules/locality/locality.module';
 import { NeighborhoodModule } from './modules/neighborhood/neighborhood.module';
+import { CompanyCategoryModule } from './modules/companyCategory/companyCategory.module';
 
 @Module({
   imports: [
@@ -39,6 +43,7 @@ import { NeighborhoodModule } from './modules/neighborhood/neighborhood.module';
     ZoneModule,
     LocalityModule,
     NeighborhoodModule,
+    CompanyCategoryModule,
     FunctionalityModule,
     ModuleLocalModule,
     WorkfrontModule,
@@ -46,7 +51,9 @@ import { NeighborhoodModule } from './modules/neighborhood/neighborhood.module';
     MongooseModule.forFeature([{ name: Events.name, schema: EventSchema }]),
     MongooseModule.forFeature([{ name: Booking.name, schema: BookingSchema }]),
     MongooseModule.forFeature([{ name: Members.name, schema: MemberSchema }]),
-    MongooseModule.forFeature([{ name: Neighborhood.name, schema: NeighborhoodSchema }]),
+    MongooseModule.forFeature([
+      { name: Neighborhood.name, schema: NeighborhoodSchema },
+    ]),
     MongooseModule.forFeature([{ name: Users.name, schema: UserSchema }]),
 
     MongooseModule.forFeature([
