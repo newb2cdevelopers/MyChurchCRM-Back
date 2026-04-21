@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   NotFoundException,
   Param,
   Post,
@@ -24,24 +25,19 @@ import {
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
 import { Types } from 'mongoose';
 import { Request } from 'express';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { CompanyDirectoryBusiness } from 'src/business/companyDirectory/companyDirectory.bl';
 import {
+  deleteCloudinaryImageByUrl,
+  uploadImageBufferToCloudinary,
+} from 'src/utilities/cloudinary';
+import {
   CompanyDirectoryCreateRequestDto,
-  CompanyDirectoryInput,
   CompanyDirectoryResponseDto,
   CompanyDirectoryUpdateRequestDto,
 } from 'src/dtos/companyDirectory/companyDirectory.dto';
-
-const companyDirectoryUploadsPath = join(
-  process.cwd(),
-  'uploads',
-  'companyDirectories',
-);
 
 interface UploadedLogoFile {
   buffer: Buffer;
@@ -51,6 +47,8 @@ interface UploadedLogoFile {
 @ApiTags('CompanyDirectories')
 @Controller('companyDirectories')
 export class CompanyDirectoryController {
+  private readonly logger = new Logger(CompanyDirectoryController.name);
+
   constructor(
     private readonly companyDirectoryBusiness: CompanyDirectoryBusiness,
   ) {}
@@ -132,7 +130,7 @@ export class CompanyDirectoryController {
     @UploadedFile() logo?: UploadedLogoFile,
     @Req() request?: Request,
   ): Promise<CompanyDirectoryResponseDto> {
-    const logoUrl = this.storeLogo(logo);
+    const logoUrl = await this.storeLogo(logo);
 
     return await this.companyDirectoryBusiness.createCompanyDirectory({
       name: body.name,
@@ -200,7 +198,14 @@ export class CompanyDirectoryController {
   ): Promise<CompanyDirectoryResponseDto> {
     this.ensureValidObjectId(id);
 
-    const logoUrl = logo ? this.storeLogo(logo) : undefined;
+    const existingCompanyDirectory =
+      await this.companyDirectoryBusiness.getCompanyDirectoryById(id);
+
+    if (!existingCompanyDirectory) {
+      throw new NotFoundException('Company directory not found');
+    }
+
+    const logoUrl = logo ? await this.storeLogo(logo) : undefined;
 
     const updatedCompanyDirectory =
       await this.companyDirectoryBusiness.updateCompanyDirectory(id, {
@@ -226,6 +231,21 @@ export class CompanyDirectoryController {
 
     if (!updatedCompanyDirectory) {
       throw new NotFoundException('Company directory not found');
+    }
+
+    if (
+      logo &&
+      existingCompanyDirectory.LogoUrl &&
+      updatedCompanyDirectory.LogoUrl &&
+      existingCompanyDirectory.LogoUrl !== updatedCompanyDirectory.LogoUrl
+    ) {
+      try {
+        await deleteCloudinaryImageByUrl(existingCompanyDirectory.LogoUrl);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to delete previous logo from Cloudinary: ${existingCompanyDirectory.LogoUrl}`,
+        );
+      }
     }
 
     return updatedCompanyDirectory;
@@ -274,22 +294,17 @@ export class CompanyDirectoryController {
     throw new BadRequestException(`${fieldName} must be a JSON array`);
   }
 
-  private storeLogo(logo?: UploadedLogoFile): string | undefined {
+  private async storeLogo(
+    logo?: UploadedLogoFile,
+  ): Promise<string | undefined> {
     if (!logo) {
       return undefined;
     }
 
-    if (!existsSync(companyDirectoryUploadsPath)) {
-      mkdirSync(companyDirectoryUploadsPath, { recursive: true });
-    }
-
-    const safeFileName = `${Date.now()}-${logo.originalname.replace(
-      /[^a-zA-Z0-9._-]/g,
-      '_',
-    )}`;
-    const absolutePath = join(companyDirectoryUploadsPath, safeFileName);
-    writeFileSync(absolutePath, logo.buffer);
-
-    return `/uploads/companyDirectories/${safeFileName}`;
+    return await uploadImageBufferToCloudinary(
+      logo.buffer,
+      'mychurchcrm/companyDirectories',
+      logo.originalname,
+    );
   }
 }

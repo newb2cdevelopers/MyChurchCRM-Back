@@ -38,7 +38,8 @@ export class CompanyDirectory {
   website?: string;
 
   @ApiProperty({
-    example: '/uploads/companyDirectories/1713420000000-company-logo.png',
+    example:
+      'https://res.cloudinary.com/demo/image/upload/v1713420000/mychurchcrm/companyDirectories/company-logo.png',
     required: false,
   })
   @Prop()
