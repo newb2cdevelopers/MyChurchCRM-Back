@@ -282,11 +282,19 @@ export class CompanyDirectoryController {
         const parsed = JSON.parse(value);
 
         if (!Array.isArray(parsed)) {
+          if (fieldName === 'categories' && value.trim() !== '') {
+            return [value.trim() as T];
+          }
+
           throw new Error();
         }
 
         return parsed as T[];
       } catch {
+        if (fieldName === 'categories' && value.trim() !== '') {
+          return [value.trim() as T];
+        }
+
         throw new BadRequestException(`${fieldName} must be a JSON array`);
       }
     }
