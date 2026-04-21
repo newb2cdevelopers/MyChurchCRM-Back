@@ -28,6 +28,7 @@ import { ZoneModule } from './modules/zone/zone.module';
 import { LocalityModule } from './modules/locality/locality.module';
 import { NeighborhoodModule } from './modules/neighborhood/neighborhood.module';
 import { CompanyCategoryModule } from './modules/companyCategory/companyCategory.module';
+import { CompanyDirectoryModule } from './modules/companyDirectory/companyDirectory.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { CompanyCategoryModule } from './modules/companyCategory/companyCategory
     LocalityModule,
     NeighborhoodModule,
     CompanyCategoryModule,
+    CompanyDirectoryModule,
     FunctionalityModule,
     ModuleLocalModule,
     WorkfrontModule,
