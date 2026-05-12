@@ -22,9 +22,18 @@ export class CompanyDirectoryBusiness {
       isActive,
     )) as unknown as CompanyDirectory[];
 
-    return companyDirectories.map((companyDirectory) =>
-      this.mapCompanyDirectory(companyDirectory),
-    );
+    const ids = companyDirectories
+      .map((companyDirectory) => companyDirectory?._id?.toString())
+      .filter((id): id is string => !!id);
+
+    const viewsCountById =
+      await this.provider.getViewsCountByCompanyDirectoryIds(ids);
+
+    return companyDirectories.map((companyDirectory) => {
+      const id = companyDirectory?._id?.toString() ?? '';
+      const viewsCount = id ? viewsCountById.get(id) ?? 0 : 0;
+      return this.mapCompanyDirectory(companyDirectory, viewsCount);
+    });
   }
 
   async getCompanyDirectoryById(
@@ -59,8 +68,13 @@ export class CompanyDirectoryBusiness {
     return companyDirectory ? this.mapCompanyDirectory(companyDirectory) : null;
   }
 
+  async registerCompanyDirectoryView(id: string): Promise<void> {
+    await this.provider.createCompanyAudit(id);
+  }
+
   private mapCompanyDirectory(
     companyDirectory: CompanyDirectory,
+    viewsCount = 0,
   ): CompanyDirectoryResponseDto {
     const categories = Array.isArray(companyDirectory.categories)
       ? companyDirectory.categories.map((category: any) => ({
@@ -91,6 +105,7 @@ export class CompanyDirectoryBusiness {
       Categories: categories as CompanyDirectoryCategoryResponseDto[],
       SocialNetworks: socialNetworks,
       IsActive: companyDirectory.isActive,
+      ViewsCount: viewsCount,
       CreatedBy: companyDirectory.createdBy?.toString(),
       ModifiedBy: companyDirectory.modifiedBy?.toString(),
       CreatedAt: (companyDirectory as any).createdAt,

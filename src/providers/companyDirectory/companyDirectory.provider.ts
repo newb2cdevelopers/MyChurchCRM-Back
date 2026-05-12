@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   CompanyDirectory,
   CompanyDirectoryDocument,
 } from 'src/schemas/companyDirectory/companyDirectory.schema';
+import {
+  CompanyAudit,
+  CompanyAuditDocument,
+} from 'src/schemas/companyDirectory/company-audit.schema';
 import { CompanyDirectoryInput } from 'src/dtos/companyDirectory/companyDirectory.dto';
 
 @Injectable()
@@ -12,6 +16,9 @@ export class CompanyDirectoryProvider {
   constructor(
     @InjectModel(CompanyDirectory.name)
     private companyDirectoryModel: Model<CompanyDirectoryDocument>,
+
+    @InjectModel(CompanyAudit.name)
+    private companyAuditModel: Model<CompanyAuditDocument>,
   ) {}
 
   async getAllCompanyDirectories(isActive?: boolean) {
@@ -82,5 +89,40 @@ export class CompanyDirectoryProvider {
     await companyDirectory.save();
 
     return companyDirectory.populate('categories');
+  }
+
+  async createCompanyAudit(companyDirectoryId: string) {
+    return this.companyAuditModel.create({ companyDirectoryId });
+  }
+
+  async getViewsCountByCompanyDirectoryIds(companyDirectoryIds: string[]) {
+    if (
+      !Array.isArray(companyDirectoryIds) ||
+      companyDirectoryIds.length === 0
+    ) {
+      return new Map<string, number>();
+    }
+
+    const objectIds = companyDirectoryIds
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+
+    if (objectIds.length === 0) {
+      return new Map<string, number>();
+    }
+
+    const rows = await this.companyAuditModel
+      .aggregate([
+        { $match: { companyDirectoryId: { $in: objectIds } } },
+        { $group: { _id: '$companyDirectoryId', count: { $sum: 1 } } },
+      ])
+      .exec();
+
+    const map = new Map<string, number>();
+    for (const row of rows) {
+      map.set(String(row._id), Number(row.count) || 0);
+    }
+
+    return map;
   }
 }

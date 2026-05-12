@@ -8,6 +8,10 @@ import {
   CompanyDirectorySchema,
 } from 'src/schemas/companyDirectory/companyDirectory.schema';
 import {
+  CompanyAudit,
+  CompanyAuditSchema,
+} from 'src/schemas/companyDirectory/company-audit.schema';
+import {
   CompanyCategory,
   CompanyCategorySchema,
 } from 'src/schemas/companyCategory/companyCategory.schema';
@@ -17,6 +21,7 @@ import { Users, UserSchema } from 'src/schemas/user/user.schema';
   imports: [
     MongooseModule.forFeature([
       { name: CompanyDirectory.name, schema: CompanyDirectorySchema },
+      { name: CompanyAudit.name, schema: CompanyAuditSchema },
       { name: CompanyCategory.name, schema: CompanyCategorySchema },
       { name: Users.name, schema: UserSchema },
     ]),

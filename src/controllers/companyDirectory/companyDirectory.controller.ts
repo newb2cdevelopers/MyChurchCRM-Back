@@ -86,6 +86,13 @@ export class CompanyDirectoryController {
     return companyDirectory;
   }
 
+  @Post(':id/register-view')
+  @ApiOkResponse({ description: 'Company directory view registered' })
+  async registerCompanyDirectoryView(@Param('id') id: string): Promise<void> {
+    this.ensureValidObjectId(id);
+    await this.companyDirectoryBusiness.registerCompanyDirectoryView(id);
+  }
+
   @UseGuards(AuthGuard)
   @Post()
   @ApiBearerAuth('access token')

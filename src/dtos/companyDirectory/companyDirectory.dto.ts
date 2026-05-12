@@ -136,6 +136,9 @@ export class CompanyDirectoryResponseDto {
   @ApiProperty({ example: true })
   IsActive: boolean;
 
+  @ApiProperty({ required: false, example: 12 })
+  ViewsCount?: number;
+
   @ApiProperty({ required: false, example: '67f8e5f2df278b4b31df8a0c' })
   CreatedBy?: string;
 
