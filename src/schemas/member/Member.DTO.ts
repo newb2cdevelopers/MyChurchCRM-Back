@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsNotEmpty,
   IsEmail,
+  IsDate,
 } from 'class-validator';
 
 export class MemberGeneralInfoDto {
@@ -102,102 +103,164 @@ export class MemberGeneralInfoDto {
 }
 
 export class AdditionalAcademicStudyDto {
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   _id: string;
 
+  @IsString()
+  @IsNotEmpty()
   @ApiProperty({ type: String })
   name: string;
 
+  @IsString()
+  @IsNotEmpty()
   @ApiProperty({ type: String })
   AcademicInstitutionName: string;
 
+  @IsOptional()
+  @IsBoolean()
   @ApiProperty({ type: Boolean })
   isFinished: boolean;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   comments: string;
 }
 
 export class RelativeDto {
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   _id: string;
 
+  @IsString()
+  @IsNotEmpty()
   @ApiProperty({ type: String })
   name: string;
 
+  @IsString()
+  @IsNotEmpty()
   @ApiProperty({ required: true, type: String })
   documentNumber: string;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   address: string;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   mobilePhone: string;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   email: string;
 
+  @IsOptional()
+  @IsDate()
   @ApiProperty({ type: Date })
   birthDate: Date;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   educationalLevel: string;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   occupation: string;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   kinship: string;
 
+  @IsOptional()
+  @IsBoolean()
   @ApiProperty({ type: Boolean, default: false })
   isMember?: boolean;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String, default: null })
   Member?: string;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   comments: string;
 }
 
 export class MemberMinistryStudyDto {
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   _id: string;
 
+  @IsString()
+  @IsNotEmpty()
   @ApiProperty({ type: String })
   name: string;
 
+  @IsDate()
+  @IsNotEmpty()
   @ApiProperty({ type: Date })
   startDate: Date;
 
+  @IsOptional()
+  @IsDate()
   @ApiProperty({ type: Date })
   endDate: Date;
 
+  @IsString()
+  @IsNotEmpty()
   @ApiProperty({ type: String })
   status: string;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   comments: string;
 }
 
 export class MemberWorkFrontDto {
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   _id: string;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   role: string;
 
+  @IsOptional()
+  @IsDate()
   @ApiProperty({ type: Date })
   startDate: Date;
 
+  @IsOptional()
+  @IsDate()
   @ApiProperty({ type: Date })
   endDate: Date;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   status: string;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String })
   comments: string;
 
+  @IsOptional()
+  @IsString()
   @ApiProperty({ type: String, required: true })
   workFrontId;
 }

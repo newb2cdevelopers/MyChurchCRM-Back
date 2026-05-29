@@ -25,6 +25,7 @@ export class MemberProvider {
             churchId: churchId,
             workfront: workfrontId,
           })
+          .sort({ createdAt: -1 })
           .populate({
             path: 'workfront',
             model: 'Workfront',
@@ -34,6 +35,7 @@ export class MemberProvider {
         .find({
           churchId: churchId,
         })
+        .sort({ createdAt: -1 })
         .populate({
           path: 'workfront',
           model: 'Workfront',
@@ -41,12 +43,14 @@ export class MemberProvider {
     }
 
     if (workfrontId) {
-      return this.memberModel.find({
-        workfront: workfrontId,
-      });
+      return this.memberModel
+        .find({
+          workfront: workfrontId,
+        })
+        .sort({ createdAt: -1 });
     }
 
-    return this.memberModel.find();
+    return this.memberModel.find().sort({ createdAt: -1 });
   }
 
   async getMemberByIdOrDocument(
