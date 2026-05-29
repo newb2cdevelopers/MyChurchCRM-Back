@@ -270,16 +270,16 @@ export class AuthBusiness {
     // Get user information with populated roles and functionalities
     // First get user by ID to get the email
     const userBasic = await this.userProvider.getUserById(tokenDoc.userId);
-    
+
     if (!userBasic) {
       this.logger.error(
         `User not found for valid refresh token: ${tokenDoc.userId}`,
       );
       throw new UserNotFoundException();
     }
-    
+
     const userBasicData = userBasic as unknown as Users;
-    
+
     // Now get full user data with populated relations using email
     const user = (await this.provider.getUserByEmail(
       userBasicData.email,
@@ -411,34 +411,68 @@ export class AuthBusiness {
 
     return `
       <!DOCTYPE html>
-      <html lang="en">
+      <html lang="es">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Password Recovery</title>
+        <title>Recuperación de contraseña</title>
       </head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background-color: #f4f4f4; padding: 20px; border-radius: 5px;">
-          <h2 style="color: #2c3e50; margin-bottom: 20px;">Password Recovery Request</h2>
-          <p>Hello,</p>
-          <p>We received a request to reset your password. Click the button below to create a new password:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${recoveryUrl}" 
-               style="background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-              Reset Password
-            </a>
-          </div>
-          <p style="color: #e74c3c; font-size: 14px;">
-            <strong>Important:</strong> This link will expire in 10 minutes for security reasons.
-          </p>
-          <p style="font-size: 14px; color: #7f8c8d;">
-            If you didn't request a password reset, please ignore this email or contact support if you have concerns.
-          </p>
-          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-          <p style="font-size: 12px; color: #95a5a6;">
-            This is an automated message, please do not reply to this email.
-          </p>
-        </div>
+      <body style="margin: 0; padding: 0; background-color: #faf8ff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #faf8ff; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" width="100%" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; border: 1px solid #f1f1f1; box-shadow: 0 0 0 1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05);">
+                <tr>
+                  <td style="padding: 40px 32px 24px; text-align: center;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto 24px;">
+                      <tr>
+                        <td align="center" style="width: 48px; height: 48px; background-color: #5e39e0; border-radius: 12px;">
+                          <span style="color: #ffffff; font-size: 22px; line-height: 48px;">⌂</span>
+                        </td>
+                      </tr>
+                    </table>
+                    <h1 style="margin: 0 0 4px; font-size: 22px; font-weight: 600; color: #131b2e; letter-spacing: -0.02em;">
+                      Recuperación de contraseña
+                    </h1>
+                    <p style="margin: 0; font-size: 14px; color: #484555; line-height: 20px;">
+                      Has solicitado restablecer tu contraseña en <strong>Sistema de Gestión Mi Iglesia</strong>
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 32px 24px;">
+                    <p style="margin: 0 0 20px; font-size: 15px; color: #131b2e; line-height: 22px;">
+                      Para crear una nueva contraseña, haz clic en el siguiente botón:
+                    </p>
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto 24px;">
+                      <tr>
+                        <td align="center" style="background-color: #5e39e0; border-radius: 8px;">
+                          <a href="${recoveryUrl}" style="display: inline-block; padding: 14px 32px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; letter-spacing: 0.01em;">
+                            RESTABLECER CONTRASEÑA
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="margin: 0; font-size: 13px; color: #797587; line-height: 18px;">
+                      ⏱ Este enlace expirará en <strong>10 minutos</strong> por razones de seguridad.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 32px 32px;">
+                    <hr style="border: none; border-top: 1px solid #eaeaea; margin: 0 0 16px;">
+                    <p style="margin: 0; font-size: 12px; color: #797587; line-height: 16px;">
+                      Si no solicitaste este cambio, ignora este mensaje. Si tienes dudas, contacta al administrador del sistema.
+                    </p>
+                    <p style="margin: 8px 0 0; font-size: 11px; color: #b9b9b9; line-height: 16px;">
+                      Este es un mensaje automatizado, por favor no respondas a este correo.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `;
@@ -451,27 +485,62 @@ export class AuthBusiness {
   private getPasswordChangedEmailTemplate(): string {
     return `
       <!DOCTYPE html>
-      <html lang="en">
+      <html lang="es">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Password Changed</title>
+        <title>Contraseña actualizada</title>
       </head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background-color: #f4f4f4; padding: 20px; border-radius: 5px;">
-          <h2 style="color: #27ae60; margin-bottom: 20px;">Password Changed Successfully</h2>
-          <p>Hello,</p>
-          <p>Your password has been changed successfully. You can now log in with your new password.</p>
-          <div style="background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 3px;">
-            <p style="margin: 0; color: #155724;">
-              <strong>Security Notice:</strong> If you didn't make this change, please contact our support team immediately.
-            </p>
-          </div>
-          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-          <p style="font-size: 12px; color: #95a5a6;">
-            This is an automated message, please do not reply to this email.
-          </p>
-        </div>
+      <body style="margin: 0; padding: 0; background-color: #faf8ff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #faf8ff; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" width="100%" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; border: 1px solid #f1f1f1; box-shadow: 0 0 0 1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05);">
+                <tr>
+                  <td style="padding: 40px 32px 24px; text-align: center;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto 24px;">
+                      <tr>
+                        <td align="center" style="width: 48px; height: 48px; background-color: #e8f5e9; border-radius: 12px;">
+                          <span style="color: #2e7d32; font-size: 22px; line-height: 48px;">✓</span>
+                        </td>
+                      </tr>
+                    </table>
+                    <h1 style="margin: 0 0 4px; font-size: 22px; font-weight: 600; color: #131b2e; letter-spacing: -0.02em;">
+                      Contraseña actualizada
+                    </h1>
+                    <p style="margin: 0; font-size: 14px; color: #484555; line-height: 20px;">
+                      Tu contraseña ha sido cambiada exitosamente
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 32px 24px;">
+                    <p style="margin: 0 0 16px; font-size: 15px; color: #131b2e; line-height: 22px;">
+                      Ya puedes iniciar sesión con tu nueva contraseña.
+                    </p>
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="background-color: #e8f5e9; border-left: 4px solid #2e7d32; border-radius: 8px; margin-bottom: 16px;">
+                      <tr>
+                        <td style="padding: 12px 16px;">
+                          <p style="margin: 0; font-size: 13px; color: #1b5e20; line-height: 18px;">
+                            <strong>Aviso de seguridad:</strong> Si no realizaste este cambio, contacta al administrador del sistema inmediatamente.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 32px 32px;">
+                    <hr style="border: none; border-top: 1px solid #eaeaea; margin: 0 0 16px;">
+                    <p style="margin: 0; font-size: 11px; color: #b9b9b9; line-height: 16px;">
+                      Este es un mensaje automatizado, por favor no respondas a este correo.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `;

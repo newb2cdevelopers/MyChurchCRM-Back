@@ -11,14 +11,17 @@ export class Module {
   @Prop()
   route: string;
 
+  @Prop()
+  description: string;
+
   @Prop({ required: true })
   icon: string;
 
   @Prop({ required: true })
   active: boolean;
 
-  @Prop({type: [mongoose.Schema.Types.ObjectId], ref: 'Functionality' })
-  Functionalities: string [] 
+  @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'Functionality' })
+  Functionalities: string[];
 }
 
 export type ModuleTextDocument = Module & mongoose.Document;

@@ -1,6 +1,15 @@
-import { Body, Controller, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import {
   ApiBody,
+  ApiOkResponse,
   ApiCreatedResponse,
   ApiTags,
   ApiOperation,
@@ -71,12 +80,13 @@ export class AuthController {
   }
 
   @Post('refresh-token')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Refresh access token',
     description:
       'Generates a new access token using a valid refresh token. Access token expires in 1 hour.',
   })
-  @ApiCreatedResponse({
+  @ApiOkResponse({
     description: 'Token refreshed successfully',
     schema: {
       example: {
