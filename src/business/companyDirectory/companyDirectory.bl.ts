@@ -101,6 +101,7 @@ export class CompanyDirectoryBusiness {
       Description: companyDirectory.description,
       Phone: companyDirectory.phone,
       Website: companyDirectory.website,
+      Address: companyDirectory.address,
       LogoUrl: companyDirectory.logoUrl,
       Categories: categories as CompanyDirectoryCategoryResponseDto[],
       SocialNetworks: socialNetworks,

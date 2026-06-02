@@ -33,6 +33,10 @@ export class CompanyDirectory {
   @Prop({ required: true })
   phone: string;
 
+  @ApiProperty({ example: 'Cra 45 # 12-34', required: false })
+  @Prop()
+  address?: string;
+
   @ApiProperty({ example: 'https://mycompany.com', required: false })
   @Prop()
   website?: string;
