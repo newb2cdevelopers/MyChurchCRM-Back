@@ -187,7 +187,7 @@ export class Members {
     ref: 'Workfront',
   })
   workfront: string;
-  // New porperty in general info
+
   @Prop()
   comments: string;
 }
