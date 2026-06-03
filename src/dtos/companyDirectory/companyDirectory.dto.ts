@@ -19,6 +19,11 @@ export class CompanyDirectorySocialNetworkDto {
 }
 
 export class CompanyDirectoryBaseRequestDto {
+  @ApiProperty({ required: false, example: 'Cra 45 # 12-34' })
+  @IsOptional()
+  @IsString({ message: 'Address must be a string' })
+  address?: string;
+
   @ApiProperty({ required: false, example: 'https://mycompany.com' })
   @IsOptional()
   @IsString({ message: 'Website must be a string' })
@@ -114,6 +119,9 @@ export class CompanyDirectoryResponseDto {
   @ApiProperty({ example: '3001234567' })
   Phone: string;
 
+  @ApiProperty({ required: false, example: 'Cra 45 # 12-34' })
+  Address?: string;
+
   @ApiProperty({ required: false, example: 'https://mycompany.com' })
   Website?: string;
 
@@ -161,6 +169,7 @@ export interface CompanyDirectoryInput {
   name?: string;
   description?: string;
   phone?: string;
+  address?: string;
   website?: string;
   logoUrl?: string;
   categories?: string[];

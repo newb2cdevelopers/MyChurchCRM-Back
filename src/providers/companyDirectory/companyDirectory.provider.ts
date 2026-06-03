@@ -66,6 +66,10 @@ export class CompanyDirectoryProvider {
       companyDirectory.website = updatedCompanyDirectory.website;
     }
 
+    if (updatedCompanyDirectory.address !== undefined) {
+      companyDirectory.address = updatedCompanyDirectory.address;
+    }
+
     if (updatedCompanyDirectory.logoUrl !== undefined) {
       companyDirectory.logoUrl = updatedCompanyDirectory.logoUrl;
     }

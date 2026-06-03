@@ -104,6 +104,11 @@ export class CompanyDirectoryController {
         name: { type: 'string', example: 'My Company' },
         description: { type: 'string', example: 'Company description' },
         phone: { type: 'string', example: '3001234567' },
+        address: {
+          type: 'string',
+          example: 'Cra 45 # 12-34',
+          description: 'Dirección física de la empresa',
+        },
         website: { type: 'string', example: 'https://mycompany.com' },
         categories: {
           type: 'string',
@@ -143,6 +148,7 @@ export class CompanyDirectoryController {
       name: body.name,
       description: body.description,
       phone: body.phone,
+      address: body.address,
       website: body.website,
       categories: this.parseJsonArray<string>(body.categories, 'categories'),
       socialNetworks: this.parseJsonArray(
@@ -170,6 +176,11 @@ export class CompanyDirectoryController {
         name: { type: 'string', example: 'My Company' },
         description: { type: 'string', example: 'Company description' },
         phone: { type: 'string', example: '3001234567' },
+        address: {
+          type: 'string',
+          example: 'Cra 45 # 12-34',
+          description: 'Dirección física de la empresa',
+        },
         website: { type: 'string', example: 'https://mycompany.com' },
         categories: {
           type: 'string',
@@ -219,6 +230,7 @@ export class CompanyDirectoryController {
         name: body.name,
         description: body.description,
         phone: body.phone,
+        address: body.address,
         website: body.website,
         categories:
           body.categories !== undefined
