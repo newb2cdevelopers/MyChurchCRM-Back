@@ -29,7 +29,8 @@ export class MemberProvider {
           .populate({
             path: 'workfront',
             model: 'Workfront',
-          });
+          })
+          .lean();
       }
       return this.memberModel
         .find({
@@ -39,7 +40,8 @@ export class MemberProvider {
         .populate({
           path: 'workfront',
           model: 'Workfront',
-        });
+        })
+        .lean();
     }
 
     if (workfrontId) {
@@ -47,10 +49,11 @@ export class MemberProvider {
         .find({
           workfront: workfrontId,
         })
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
     }
 
-    return this.memberModel.find().sort({ createdAt: -1 });
+    return this.memberModel.find().sort({ createdAt: -1 }).lean();
   }
 
   async getMemberByIdOrDocument(

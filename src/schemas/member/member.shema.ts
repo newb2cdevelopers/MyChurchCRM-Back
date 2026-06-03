@@ -1,14 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 
-
 @Schema()
 class AdditionalAcademicStudy {
- _id: number;
+  _id: number;
 
   @Prop()
   name: string;
-  
+
   @Prop()
   AcademicInstitutionName: string;
 
@@ -19,15 +18,17 @@ class AdditionalAcademicStudy {
   comments: string;
 }
 
-const AdditionalAcademicStudySchema = SchemaFactory.createForClass(AdditionalAcademicStudy);
+const AdditionalAcademicStudySchema = SchemaFactory.createForClass(
+  AdditionalAcademicStudy,
+);
 //
 @Schema()
 class MemberMinistryStudy {
- _id: number;
+  _id: number;
 
   @Prop()
   name: string;
-  
+
   @Prop()
   startDate: Date;
 
@@ -41,14 +42,19 @@ class MemberMinistryStudy {
   comments: string;
 }
 
-const MemberMinistryStudySchema = SchemaFactory.createForClass(MemberMinistryStudy);
+const MemberMinistryStudySchema =
+  SchemaFactory.createForClass(MemberMinistryStudy);
 
 @Schema()
 class MemberWorkFront {
- _id: number;
- 
- @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Workfront' })
- workFrontId: string;
+  _id: number;
+
+  @Prop({
+    required: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workfront',
+  })
+  workFrontId: string;
 
   @Prop()
   role: string;
@@ -70,15 +76,14 @@ const MemberWorkFrontSchema = SchemaFactory.createForClass(MemberWorkFront);
 
 @Schema()
 class Relative {
-
- _id: number;
+  _id: number;
 
   @Prop()
   name: string;
-  
+
   @Prop({ required: true })
   documentNumber: string;
-  
+
   @Prop()
   address: string;
 
@@ -89,21 +94,21 @@ class Relative {
   email: string;
 
   @Prop({ required: true })
-  birthDate : Date;
+  birthDate: Date;
 
   @Prop()
-  educationalLevel : string;
+  educationalLevel: string;
 
   @Prop({ required: true })
-  occupation : string;
+  occupation: string;
 
   @Prop({ required: true })
-  kinship  : string;
+  kinship: string;
 
-  @Prop({default: false})
+  @Prop({ default: false })
   isMember: boolean;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, default: null, ref: 'Members'})
+  @Prop({ type: mongoose.Schema.Types.ObjectId, default: null, ref: 'Members' })
   Member: string;
 
   @Prop()
@@ -119,7 +124,6 @@ export class Members {
   @Prop({ unique: true })
   documentNumber: string;
 
-    
   @Prop({ required: true })
   fullName: string;
 
@@ -142,22 +146,22 @@ export class Members {
   email: string;
 
   @Prop()
-  birthDate : Date;
+  birthDate: Date;
 
   @Prop()
-  maritalStatus : string;
+  maritalStatus: string;
 
   @Prop()
-  educationalLevel : string;
+  educationalLevel: string;
 
-  @Prop({type: [AdditionalAcademicStudySchema], default: []})
-  additionalAcademicStudies : [AdditionalAcademicStudy]
-  
-  @Prop({type: [RelativeSchema], default: []})
-  relatives : [Relative]
+  @Prop({ type: [AdditionalAcademicStudySchema], default: [] })
+  additionalAcademicStudies: [AdditionalAcademicStudy];
+
+  @Prop({ type: [RelativeSchema], default: [] })
+  relatives: [Relative];
 
   @Prop()
-  occupation : string;
+  occupation: string;
 
   @Prop()
   conversionyear: number;
@@ -168,13 +172,13 @@ export class Members {
   @Prop()
   isBaptised: boolean;
 
-  @Prop({type: [MemberMinistryStudySchema] ,default: []})
-  ministryStudies : [MemberMinistryStudy]
+  @Prop({ type: [MemberMinistryStudySchema], default: [] })
+  ministryStudies: [MemberMinistryStudy];
 
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Church' })
   churchId: string;
 
-  @Prop({type: [MemberWorkFrontSchema], default: []})
+  @Prop({ type: [MemberWorkFrontSchema], default: [] })
   workFronts: [MemberWorkFront];
 
   @Prop({
@@ -183,11 +187,12 @@ export class Members {
     ref: 'Workfront',
   })
   workfront: string;
-// New porperty in general info
+  // New porperty in general info
   @Prop()
-  comments : string;
+  comments: string;
 }
 
 export type MemberDocument = Members & mongoose.Document;
 
 export const MemberSchema = SchemaFactory.createForClass(Members);
+MemberSchema.index({ churchId: 1, createdAt: -1 });
