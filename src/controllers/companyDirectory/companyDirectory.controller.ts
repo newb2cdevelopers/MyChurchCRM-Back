@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Logger,
   NotFoundException,
@@ -37,11 +38,13 @@ import {
   CompanyDirectoryCreateRequestDto,
   CompanyDirectoryResponseDto,
   CompanyDirectoryUpdateRequestDto,
+  CreateProductRequestDto,
 } from 'src/dtos/companyDirectory/companyDirectory.dto';
 
 interface UploadedLogoFile {
   buffer: Buffer;
   originalname: string;
+  mimetype: string;
 }
 
 @ApiTags('CompanyDirectories')
@@ -268,6 +271,103 @@ export class CompanyDirectoryController {
     }
 
     return updatedCompanyDirectory;
+  }
+
+  @UseGuards(AuthGuard)
+  @Post(':id/products')
+  @ApiBearerAuth('access token')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', example: 'Product title' },
+        description: {
+          type: 'string',
+          example: 'Product description',
+        },
+        image: {
+          type: 'string',
+          format: 'binary',
+          description: 'Product image file',
+        },
+      },
+      required: ['title', 'image'],
+    },
+  })
+  @ApiCreatedResponse({ description: 'Product added to company' })
+  @UseInterceptors(FileInterceptor('image', { storage: memoryStorage() }))
+  async addProduct(
+    @Param('id') id: string,
+    @Body() body: CreateProductRequestDto,
+    @UploadedFile() image: UploadedLogoFile,
+  ): Promise<CompanyDirectoryResponseDto> {
+    this.ensureValidObjectId(id);
+
+    if (!image) {
+      throw new BadRequestException('Image file is required');
+    }
+
+    if (!image.mimetype || !image.mimetype.startsWith('image/')) {
+      throw new BadRequestException('The file must be a valid image');
+    }
+
+    const existingCompany =
+      await this.companyDirectoryBusiness.getCompanyDirectoryById(id);
+
+    if (!existingCompany) {
+      throw new NotFoundException('Company directory not found');
+    }
+
+    if (
+      Array.isArray(existingCompany.Products) &&
+      existingCompany.Products.length >= 5
+    ) {
+      throw new BadRequestException(
+        'The company already has the maximum of 5 products',
+      );
+    }
+
+    const updatedCompany =
+      await this.companyDirectoryBusiness.addProductToCompany(
+        id,
+        body.title,
+        body.description,
+        image.buffer,
+        image.originalname,
+      );
+
+    if (!updatedCompany) {
+      throw new NotFoundException('Company directory not found');
+    }
+
+    return updatedCompany;
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete(':id/products/:productIndex')
+  @ApiBearerAuth('access token')
+  @ApiOkResponse({ description: 'Product removed from company' })
+  async removeProduct(
+    @Param('id') id: string,
+    @Param('productIndex') productIndex: string,
+  ): Promise<CompanyDirectoryResponseDto> {
+    this.ensureValidObjectId(id);
+
+    const index = parseInt(productIndex, 10);
+
+    if (isNaN(index) || index < 0) {
+      throw new BadRequestException('Invalid product index');
+    }
+
+    const updatedCompany =
+      await this.companyDirectoryBusiness.removeProductFromCompany(id, index);
+
+    if (!updatedCompany) {
+      throw new NotFoundException('Company directory or product not found');
+    }
+
+    return updatedCompany;
   }
 
   private parseBooleanQuery(value?: string): boolean | undefined {

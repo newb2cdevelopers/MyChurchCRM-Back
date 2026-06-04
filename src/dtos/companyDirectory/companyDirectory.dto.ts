@@ -106,6 +106,35 @@ export class CompanyDirectoryCategoryResponseDto {
   Name: string;
 }
 
+export class CreateProductRequestDto {
+  @ApiProperty({ example: 'Product title' })
+  @IsString({ message: 'Title must be a string' })
+  @IsNotEmpty({ message: 'Title is required' })
+  title: string;
+
+  @ApiProperty({ required: false, example: 'Product description' })
+  @IsOptional()
+  @IsString({ message: 'Description must be a string' })
+  description?: string;
+}
+
+export class CompanyDirectoryProductResponseDto {
+  @ApiProperty({ example: 0 })
+  Index: number;
+
+  @ApiProperty({ example: 'Product title' })
+  Title: string;
+
+  @ApiProperty({ required: false, example: 'Product description' })
+  Description?: string;
+
+  @ApiProperty({
+    example:
+      'https://res.cloudinary.com/demo/image/upload/v1713420000/mychurchcrm/companyProducts/product-image.png',
+  })
+  ImageUrl: string;
+}
+
 export class CompanyDirectoryResponseDto {
   @ApiProperty({ example: '67f8e5f2df278b4b31df8a0d' })
   Id: string;
@@ -140,6 +169,12 @@ export class CompanyDirectoryResponseDto {
     required: false,
   })
   SocialNetworks?: CompanyDirectoryResponseSocialNetworkDto[];
+
+  @ApiProperty({
+    type: [CompanyDirectoryProductResponseDto],
+    required: false,
+  })
+  Products?: CompanyDirectoryProductResponseDto[];
 
   @ApiProperty({ example: true })
   IsActive: boolean;
