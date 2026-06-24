@@ -129,4 +129,35 @@ export class CompanyDirectoryProvider {
 
     return map;
   }
+
+  async addProduct(
+    companyId: string,
+    product: { title: string; description?: string; imageUrl: string },
+  ) {
+    const company = await this.companyDirectoryModel.findById(companyId);
+
+    if (!company) {
+      return null;
+    }
+
+    company.products.push(product);
+    await company.save();
+    return company.populate('categories');
+  }
+
+  async removeProduct(companyId: string, productIndex: number) {
+    const company = await this.companyDirectoryModel.findById(companyId);
+
+    if (!company) {
+      return null;
+    }
+
+    if (productIndex < 0 || productIndex >= company.products.length) {
+      return null;
+    }
+
+    company.products.splice(productIndex, 1);
+    await company.save();
+    return company.populate('categories');
+  }
 }

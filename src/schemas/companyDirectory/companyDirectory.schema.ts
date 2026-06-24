@@ -17,6 +17,28 @@ const CompanyDirectorySocialNetworkSchema = SchemaFactory.createForClass(
   CompanyDirectorySocialNetwork,
 );
 
+@Schema({ _id: false })
+export class CompanyDirectoryProduct {
+  @ApiProperty({ example: 'Product title' })
+  @Prop({ required: true, trim: true })
+  title: string;
+
+  @ApiProperty({ example: 'Product description', required: false })
+  @Prop()
+  description?: string;
+
+  @ApiProperty({
+    example:
+      'https://res.cloudinary.com/demo/image/upload/v1713420000/mychurchcrm/companyProducts/product-image.png',
+  })
+  @Prop({ required: true })
+  imageUrl: string;
+}
+
+const CompanyDirectoryProductSchema = SchemaFactory.createForClass(
+  CompanyDirectoryProduct,
+);
+
 @Schema({ timestamps: true })
 export class CompanyDirectory {
   _id: number;
@@ -63,6 +85,21 @@ export class CompanyDirectory {
   @ApiProperty({ type: [CompanyDirectorySocialNetwork], required: false })
   @Prop({ type: [CompanyDirectorySocialNetworkSchema], default: [] })
   socialNetworks: CompanyDirectorySocialNetwork[];
+
+  @ApiProperty({ type: [CompanyDirectoryProduct], required: false })
+  @Prop({
+    type: [CompanyDirectoryProductSchema],
+    default: [],
+    validate: [
+      {
+        validator: function (v: CompanyDirectoryProduct[]) {
+          return v.length <= 5;
+        },
+        message: 'Products array cannot exceed 5 items',
+      },
+    ],
+  })
+  products: CompanyDirectoryProduct[];
 
   @ApiProperty({ example: '67f8e5f2df278b4b31df8a0c' })
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Users' })
