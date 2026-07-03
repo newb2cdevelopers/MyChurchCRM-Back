@@ -6,8 +6,13 @@ import {
   FamilyGroupDocument,
   FamilyGroupAttendance,
   FamilyGroupAttendanceDocument,
-  FamilyGroupMember,
 } from 'src/schemas/familyGroup/familyGroup.schema';
+import {
+  CreateFamilyGroupDto,
+  UpdateFamilyGroupDto,
+  RegisterAttendanceDto,
+  RegisterFamilyGroupMemberDto,
+} from 'src/schemas/familyGroup/familyGroup.dto';
 import { Members, MemberDocument } from 'src/schemas/member/member.shema';
 import {
   Neighborhood,
@@ -103,7 +108,7 @@ export class FamilyGroupProvider {
       .populate(['familyGroup']);
   }
 
-  async create(familyGroup: FamilyGroup): Promise<GeneralResponse> {
+  async create(familyGroup: CreateFamilyGroupDto): Promise<GeneralResponse> {
     const response: GeneralResponse = { isSuccessful: true };
 
     try {
@@ -151,19 +156,20 @@ export class FamilyGroupProvider {
     }
   }
 
-  async update(familyGroup: FamilyGroup): Promise<GeneralResponse> {
+  async update(
+    id: string,
+    familyGroup: UpdateFamilyGroupDto,
+  ): Promise<GeneralResponse> {
     const response: GeneralResponse = { isSuccessful: true };
 
-    if (!familyGroup._id) {
+    if (!id) {
       response.message = 'El grupo familiar no es válido';
       response.isSuccessful = false;
       return response;
     }
 
-    const id = familyGroup._id;
-
     const existingGroup = await this.familyGroupModel.findOne({
-      id: id,
+      _id: id,
     });
 
     if (!existingGroup) {
@@ -217,7 +223,7 @@ export class FamilyGroupProvider {
   }
 
   async registerFamilyGroupAttendance(
-    familyGroupAttendance: FamilyGroupAttendance,
+    familyGroupAttendance: RegisterAttendanceDto,
   ): Promise<GeneralResponse> {
     const response: GeneralResponse = { isSuccessful: true };
 
@@ -299,7 +305,7 @@ export class FamilyGroupProvider {
 
   async registerFamilyGroupMember(
     familyGroupId: string,
-    familyMemberData: FamilyGroupMember,
+    familyMemberData: RegisterFamilyGroupMemberDto,
   ): Promise<GeneralResponse> {
     const response: GeneralResponse = { isSuccessful: true };
 
@@ -316,9 +322,11 @@ export class FamilyGroupProvider {
 
       console.log(existingFamilyGroup);
       try {
-        if (familyMemberData._id) {
+        if (familyMemberData.memberId) {
           const filterMember = existingFamilyGroup.members.filter((member) => {
-            return member._id.toString() === familyMemberData._id.toString();
+            return (
+              member._id.toString() === familyMemberData.memberId.toString()
+            );
           });
 
           console.log(filterMember);
@@ -333,7 +341,7 @@ export class FamilyGroupProvider {
           await this.familyGroupModel.findOneAndUpdate(
             {
               _id: familyGroupId,
-              'members._id': familyMemberData._id,
+              'members._id': familyMemberData.memberId,
             },
             {
               $set: {

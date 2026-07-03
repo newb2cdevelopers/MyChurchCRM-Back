@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 
+import { FamilyGroup } from 'src/schemas/familyGroup/familyGroup.schema';
 import {
-  FamilyGroup,
-  FamilyGroupAttendance,
-  FamilyGroupMember,
-} from 'src/schemas/familyGroup/familyGroup.schema';
+  CreateFamilyGroupDto,
+  UpdateFamilyGroupDto,
+  RegisterAttendanceDto,
+  RegisterFamilyGroupMemberDto,
+} from 'src/schemas/familyGroup/familyGroup.dto';
 import { FamilyGroupProvider } from 'src/providers/familiyGroup/familyGroup.provider';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
@@ -33,28 +35,28 @@ export class FamilyGroupBusiness {
     ) as unknown as Promise<FamilyGroup>;
   }
 
-  async create(familyGroup: FamilyGroup): Promise<GeneralResponse> {
+  async create(familyGroup: CreateFamilyGroupDto): Promise<GeneralResponse> {
     return this.provider.create(
       familyGroup,
     ) as unknown as Promise<GeneralResponse>;
   }
 
-  async update(familyGroup: FamilyGroup): Promise<GeneralResponse> {
+  async update(
+    id: string,
+    familyGroup: UpdateFamilyGroupDto,
+  ): Promise<GeneralResponse> {
     return this.provider.update(
+      id,
       familyGroup,
     ) as unknown as Promise<GeneralResponse>;
   }
 
-  async getFamilyGroupAttendance(
-    familyGroupId: string,
-  ): Promise<FamilyGroupAttendance[]> {
-    return this.provider.getFamilyGroupAttendance(
-      familyGroupId,
-    ) as unknown as Promise<FamilyGroupAttendance[]>;
+  async getFamilyGroupAttendance(familyGroupId: string) {
+    return this.provider.getFamilyGroupAttendance(familyGroupId);
   }
 
   async registerFamilyGroupAttendance(
-    attendance: FamilyGroupAttendance,
+    attendance: RegisterAttendanceDto,
   ): Promise<GeneralResponse> {
     return this.provider.registerFamilyGroupAttendance(
       attendance,
@@ -63,7 +65,7 @@ export class FamilyGroupBusiness {
 
   async registerFamilyGroupMember(
     familyGroupId: string,
-    familyMemberData: FamilyGroupMember,
+    familyMemberData: RegisterFamilyGroupMemberDto,
   ): Promise<GeneralResponse> {
     return this.provider.registerFamilyGroupMember(
       familyGroupId,
