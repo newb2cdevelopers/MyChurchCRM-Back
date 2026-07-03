@@ -6,7 +6,6 @@ import {
   Put,
   Param,
   NotFoundException,
-  InternalServerErrorException,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -94,11 +93,12 @@ export class MemberController {
     );
   }
 
-  @Get('getMemberByIdentifier/:isSearchById/:identifier')
+  @UseGuards(AuthGuard)
+  @Get(':id')
   @ApiOperation({
-    summary: 'Get member by ID or document',
+    summary: 'Get member by ID',
     description:
-      'Looks up a member either by MongoDB _id (isSearchById=true) or by document number (isSearchById=false). Public endpoint.',
+      'Returns the full details of a member including populated workfront.',
   })
   @ApiOkResponse({
     description: 'Member found',
@@ -107,39 +107,23 @@ export class MemberController {
         _id: '679d017daf1fff94edac0c1a',
         fullName: 'Carlos Mario',
         documentNumber: '1236566',
+        documentType: 'CC',
+        mobilePhone: '316929417',
+        address: 'CR 23 # 30 -40',
+        workfront: { _id: 'abc123', name: 'Alabanza' },
+        relatives: [],
+        ministryStudies: [],
       },
     },
   })
-  @ApiNotFoundResponse({ description: 'User not found' })
-  @ApiParam({
-    name: 'isSearchById',
-    required: true,
-    description: 'true to search by _id, false to search by document number',
-    example: 'true',
-  })
-  @ApiParam({
-    name: 'identifier',
-    required: true,
-    description: 'The _id or document number to search for',
-    example: '679d017daf1fff94edac0c1a',
-  })
-  async getMemberByIdOrDocument(
-    @Param('isSearchById') isSearchById: boolean,
-    @Param('identifier') identifier: string,
-  ): Promise<Members> {
-    try {
-      const result = await this.memberBusiness.getMemberByIdOrDocument(
-        isSearchById,
-        identifier,
-      );
+  @ApiNotFoundResponse({ description: 'Member not found' })
+  @ApiParam({ name: 'id', required: true, description: 'Member MongoDB ID' })
+  async getMemberById(@Param('id') id: string): Promise<Members> {
+    const result = await this.memberBusiness.getMemberById(id);
 
-      if (!result) throw new NotFoundException('User Not Found');
+    if (!result) throw new NotFoundException('Member not found');
 
-      return result;
-    } catch (error) {
-      console.log(error);
-      throw new InternalServerErrorException('Error in server');
-    }
+    return result;
   }
 
   @UseGuards(AuthGuard)

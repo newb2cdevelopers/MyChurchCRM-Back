@@ -47,6 +47,11 @@ export class CreateFamilyGroupDto {
   @IsOptional()
   @ApiPropertyOptional({ example: 'Activo' })
   status?: string;
+
+  @IsMongoId()
+  @IsOptional()
+  @ApiPropertyOptional({ example: '62b5eb1ab5f08f33e6de2c28' })
+  created_by?: string;
 }
 
 export class UpdateFamilyGroupDto {

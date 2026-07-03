@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 
 import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { Auth } from 'src/modules/auth/auth.decorator';
+import { JWTPayload } from 'src/schemas/auth/JWTPayload';
 import { FamilyGroupBusiness } from 'src/business/familyGroup/familyGroup.bl';
 import { FamilyGroup } from 'src/schemas/familyGroup/familyGroup.schema';
 import {
@@ -174,7 +176,9 @@ export class FamiliyGroupController {
   @ApiBody({ type: CreateFamilyGroupDto })
   async Create(
     @Body() familyGroup: CreateFamilyGroupDto,
+    @Auth() user: JWTPayload,
   ): Promise<GeneralResponse> {
+    familyGroup.created_by = user.userId;
     return await this.familyGroupBusiness.create(familyGroup);
   }
 

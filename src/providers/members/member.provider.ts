@@ -60,29 +60,11 @@ export class MemberProvider {
     return { data, metadata: { currentPage, totalPages, totalRecords } };
   }
 
-  async getMemberByIdOrDocument(
-    isSearchById: boolean,
-    identifier: string,
-  ): Promise<Members> {
-    if (isSearchById.toString() === 'true') {
-      return await this.memberModel
-        .findOne({
-          _id: identifier,
-        })
-        .populate({
-          path: 'workfront',
-          model: 'Workfront',
-        });
-    }
-
-    return await this.memberModel
-      .findOne({
-        documentNumber: identifier,
-      })
-      .populate({
-        path: 'workfront',
-        model: 'Workfront',
-      });
+  async getMemberById(id: string): Promise<Members> {
+    return await this.memberModel.findById(id).populate({
+      path: 'workfront',
+      model: 'Workfront',
+    });
   }
 
   async create(member: MemberGeneralInfoDto): Promise<GeneralResponse> {

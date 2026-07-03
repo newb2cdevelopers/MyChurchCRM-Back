@@ -31,14 +31,8 @@ export class MemberBusiness {
     ) as unknown as Promise<PaginatedResult<Members>>;
   }
 
-  async getMemberByIdOrDocument(
-    isSearchById: boolean,
-    identifier: string,
-  ): Promise<Members> {
-    return await this.provider.getMemberByIdOrDocument(
-      isSearchById,
-      identifier,
-    );
+  async getMemberById(id: string): Promise<Members> {
+    return await this.provider.getMemberById(id);
   }
 
   async create(member: MemberGeneralInfoDto): Promise<GeneralResponse> {
