@@ -24,15 +24,11 @@ import { WorkfrontBusiness } from 'src/business/workfronts/workfront.bl';
 import { Workfront } from 'src/schemas/workfronts/workfront.schema';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { WorkfrontSaveAssignmentDto } from 'src/dtos/workfronts';
-import { AuthProvider } from 'src/providers/auth/auth.provider';
 
 @ApiTags('Workfronts')
 @Controller('workfront')
 export class WorkfrontController {
-  constructor(
-    private readonly workfrontBusiness: WorkfrontBusiness,
-    private readonly authProvider: AuthProvider,
-  ) {}
+  constructor(private readonly workfrontBusiness: WorkfrontBusiness) {}
 
   @Get()
   @ApiOperation({
@@ -109,14 +105,13 @@ export class WorkfrontController {
   async getWorkFrontAssignmentData(
     @Auth() user: JWTPayload,
   ): Promise<GeneralResponse> {
-    const fullUser = await this.authProvider.getUserById(user.userId);
-    const churchId = fullUser?.churchId?.toString();
-
-    if (!churchId) {
+    if (!user.churchId) {
       throw new ForbiddenException('No tienes acceso a ninguna iglesia');
     }
 
-    return await this.workfrontBusiness.getWorkFrontAssignmentData(churchId);
+    return await this.workfrontBusiness.getWorkFrontAssignmentData(
+      user.churchId,
+    );
   }
 
   @Post()

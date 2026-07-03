@@ -34,16 +34,12 @@ import {
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
-import { AuthProvider } from 'src/providers/auth/auth.provider';
 import { MAINWORKFRONTID } from 'src/Constants';
 
 @ApiTags('Members')
 @Controller('member')
 export class MemberController {
-  constructor(
-    private readonly memberBusiness: MemberBusiness,
-    private readonly authProvider: AuthProvider,
-  ) {}
+  constructor(private readonly memberBusiness: MemberBusiness) {}
 
   @UseGuards(AuthGuard)
   @Get()
@@ -76,8 +72,7 @@ export class MemberController {
     @Query('page') page: number,
     @Query('limit') limit: number,
   ): Promise<PaginatedResult<Members>> {
-    const fullUser = await this.authProvider.getUserById(user.userId);
-    let workfrontId = fullUser?.workfront?.toString();
+    let workfrontId = user.workfront;
 
     if (!workfrontId) {
       return {
@@ -91,7 +86,7 @@ export class MemberController {
     }
 
     return await this.memberBusiness.getAllMembers(
-      fullUser?.churchId?.toString(),
+      user.churchId,
       workfrontId,
       search,
       page,

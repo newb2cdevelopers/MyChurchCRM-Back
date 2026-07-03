@@ -205,6 +205,8 @@ export class AuthBusiness {
     const payload: JWTPayload = {
       userId: user._id.toString(),
       email: user.email,
+      churchId: user.churchId?.toString(),
+      workfront: user.workfront?.toString(),
     };
     const access_token = this.jwtService.sign(payload, {
       expiresIn: '1h', // Changed from 3h to 1h
@@ -295,6 +297,8 @@ export class AuthBusiness {
     const payload: JWTPayload = {
       userId: user._id.toString(),
       email: user.email,
+      churchId: user.churchId?.toString(),
+      workfront: user.workfront?.toString(),
     };
     const access_token = this.jwtService.sign(payload, {
       expiresIn: '1h',
