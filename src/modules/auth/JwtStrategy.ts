@@ -17,7 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JWTPayload): Promise<Users> {
-    const user = (await this.provider.getUserByEmail(
+    const user = (await this.provider.getUserById(
       payload.userId,
     )) as unknown as Users;
     if (!user) {

@@ -4,7 +4,6 @@ import {
   Get,
   Post,
   Put,
-  Request,
   Param,
   NotFoundException,
   InternalServerErrorException,
@@ -12,6 +11,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { Auth } from 'src/modules/auth/auth.decorator';
+import { JWTPayload } from 'src/schemas/auth/JWTPayload';
 import { Members } from 'src/schemas/member/member.shema';
 import { ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
 import { MemberBusiness } from 'src/business/member/member.bl';
@@ -24,23 +25,28 @@ import {
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
+import { AuthProvider } from 'src/providers/auth/auth.provider';
 import { MAINWORKFRONTID } from 'src/Constants';
 @ApiTags('Members')
 @Controller('member')
 export class MemberController {
-  constructor(private readonly memberBusiness: MemberBusiness) {}
+  constructor(
+    private readonly memberBusiness: MemberBusiness,
+    private readonly authProvider: AuthProvider,
+  ) {}
 
   @UseGuards(AuthGuard)
   @Get()
   @ApiCreatedResponse({ description: 'Member Info' })
   async getMembers(
+    @Auth() user: JWTPayload,
     @Query('churchId') churchId: string,
     @Query('search') search: string,
     @Query('page') page: number,
     @Query('limit') limit: number,
-    @Request() req,
   ): Promise<PaginatedResult<Members>> {
-    let workfrontId = req.user.workfront && req.user.workfront.toString();
+    const fullUser = await this.authProvider.getUserById(user.userId);
+    let workfrontId = fullUser?.workfront?.toString();
 
     if (!workfrontId) {
       return {

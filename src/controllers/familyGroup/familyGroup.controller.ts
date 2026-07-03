@@ -7,8 +7,10 @@ import {
   Request,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 
+import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { FamilyGroupBusiness } from 'src/business/familyGroup/familyGroup.bl';
 import {
   FamilyGroup,
@@ -26,6 +28,7 @@ import { PaginatedResult } from 'src/dtos/pagination.dto';
 export class FamiliyGroupController {
   constructor(private readonly familyGroupBusiness: FamilyGroupBusiness) {}
 
+  @UseGuards(AuthGuard)
   @Get()
   @ApiQuery({
     name: 'churchId',
@@ -62,22 +65,26 @@ export class FamiliyGroupController {
     );
   }
 
+  @UseGuards(AuthGuard)
   @Get(':id')
   @ApiCreatedResponse({ description: 'Family Group By ID' })
   async getFamilyGroupById(@Param('id') id: string): Promise<FamilyGroup> {
     return await this.familyGroupBusiness.getFamilyGroupById(id);
   }
 
+  @UseGuards(AuthGuard)
   @Post()
   async Create(@Body() familyGroup: FamilyGroup): Promise<GeneralResponse> {
     return await this.familyGroupBusiness.create(familyGroup);
   }
 
+  @UseGuards(AuthGuard)
   @Put()
   async Update(@Body() familyGroup: FamilyGroup): Promise<GeneralResponse> {
     return await this.familyGroupBusiness.update(familyGroup);
   }
 
+  @UseGuards(AuthGuard)
   @Get('attendanceByGroup/:familyGroupId')
   @ApiCreatedResponse({ description: 'Family Group Attendance Info' })
   async getFamilyGroupAttendance(
@@ -90,6 +97,7 @@ export class FamiliyGroupController {
     );
   }
 
+  @UseGuards(AuthGuard)
   @Post('registerFamilyGroupAttendance')
   async RegisterFamiliyGroupAttendance(
     @Body() familyGroupAttendance: FamilyGroupAttendance,
@@ -99,6 +107,7 @@ export class FamiliyGroupController {
     );
   }
 
+  @UseGuards(AuthGuard)
   @Post('registerFamilyGroupMember/:familyGroupId')
   async RegisterFamiliyGroupMemeber(
     @Body() familyGroupMember: FamilyGroupMember,

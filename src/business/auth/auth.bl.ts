@@ -202,7 +202,10 @@ export class AuthBusiness {
     )) as unknown as Users;
 
     // Generate access token (1 hour duration)
-    const payload: JWTPayload = { userId: user.email };
+    const payload: JWTPayload = {
+      userId: user._id.toString(),
+      email: user.email,
+    };
     const access_token = this.jwtService.sign(payload, {
       expiresIn: '1h', // Changed from 3h to 1h
       secret: key,
@@ -268,21 +271,8 @@ export class AuthBusiness {
     }
 
     // Get user information with populated roles and functionalities
-    // First get user by ID to get the email
-    const userBasic = await this.userProvider.getUserById(tokenDoc.userId);
-
-    if (!userBasic) {
-      this.logger.error(
-        `User not found for valid refresh token: ${tokenDoc.userId}`,
-      );
-      throw new UserNotFoundException();
-    }
-
-    const userBasicData = userBasic as unknown as Users;
-
-    // Now get full user data with populated relations using email
-    const user = (await this.provider.getUserByEmail(
-      userBasicData.email,
+    const user = (await this.provider.getUserById(
+      tokenDoc.userId,
       true,
     )) as unknown as Users;
 
@@ -302,7 +292,10 @@ export class AuthBusiness {
     }
 
     // Generate new access token (1 hour)
-    const payload: JWTPayload = { userId: user.email };
+    const payload: JWTPayload = {
+      userId: user._id.toString(),
+      email: user.email,
+    };
     const access_token = this.jwtService.sign(payload, {
       expiresIn: '1h',
       secret: key,
