@@ -14,7 +14,16 @@ import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { Auth } from 'src/modules/auth/auth.decorator';
 import { JWTPayload } from 'src/schemas/auth/JWTPayload';
 import { Members } from 'src/schemas/member/member.shema';
-import { ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { MemberBusiness } from 'src/business/member/member.bl';
 import {
   MemberGeneralInfoDto,
@@ -27,6 +36,7 @@ import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
 import { AuthProvider } from 'src/providers/auth/auth.provider';
 import { MAINWORKFRONTID } from 'src/Constants';
+
 @ApiTags('Members')
 @Controller('member')
 export class MemberController {
@@ -37,10 +47,31 @@ export class MemberController {
 
   @UseGuards(AuthGuard)
   @Get()
-  @ApiCreatedResponse({ description: 'Member Info' })
+  @ApiOperation({
+    summary: 'Get all members',
+    description:
+      "Returns a paginated list of members filtered by the logged user's church and workfront. Supports search and pagination.",
+  })
+  @ApiOkResponse({
+    description: 'Paginated list of members',
+    schema: {
+      example: {
+        data: [
+          {
+            _id: '679d017daf1fff94edac0c1a',
+            fullName: 'Carlos Mario',
+            documentNumber: '1236566',
+            documentType: 'CC',
+            mobilePhone: '316929417',
+            address: 'CR 23 # 30 -40',
+          },
+        ],
+        metadata: { currentPage: 1, totalPages: 5, totalRecords: 50 },
+      },
+    },
+  })
   async getMembers(
     @Auth() user: JWTPayload,
-    @Query('churchId') churchId: string,
     @Query('search') search: string,
     @Query('page') page: number,
     @Query('limit') limit: number,
@@ -60,7 +91,7 @@ export class MemberController {
     }
 
     return await this.memberBusiness.getAllMembers(
-      churchId,
+      fullUser?.churchId?.toString(),
       workfrontId,
       search,
       page,
@@ -69,6 +100,34 @@ export class MemberController {
   }
 
   @Get('getMemberByIdentifier/:isSearchById/:identifier')
+  @ApiOperation({
+    summary: 'Get member by ID or document',
+    description:
+      'Looks up a member either by MongoDB _id (isSearchById=true) or by document number (isSearchById=false). Public endpoint.',
+  })
+  @ApiOkResponse({
+    description: 'Member found',
+    schema: {
+      example: {
+        _id: '679d017daf1fff94edac0c1a',
+        fullName: 'Carlos Mario',
+        documentNumber: '1236566',
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  @ApiParam({
+    name: 'isSearchById',
+    required: true,
+    description: 'true to search by _id, false to search by document number',
+    example: 'true',
+  })
+  @ApiParam({
+    name: 'identifier',
+    required: true,
+    description: 'The _id or document number to search for',
+    example: '679d017daf1fff94edac0c1a',
+  })
   async getMemberByIdOrDocument(
     @Param('isSearchById') isSearchById: boolean,
     @Param('identifier') identifier: string,
@@ -88,12 +147,64 @@ export class MemberController {
     }
   }
 
+  @UseGuards(AuthGuard)
   @Post()
+  @ApiOperation({
+    summary: 'Create a new member',
+    description:
+      'Creates a new member with general information, academic studies, relatives, and ministry data.',
+  })
+  @ApiCreatedResponse({
+    description: 'Member created successfully',
+    schema: {
+      example: {
+        isSuccessful: true,
+        data: {
+          _id: '679d017daf1fff94edac0c1a',
+          fullName: 'Carlos Mario',
+          documentNumber: '1236566',
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Validation error',
+    schema: {
+      example: { isSuccessful: false, message: 'El miembro ya existe' },
+    },
+  })
+  @ApiBody({ type: MemberGeneralInfoDto })
   async Create(@Body() member: MemberGeneralInfoDto): Promise<GeneralResponse> {
     return await this.memberBusiness.create(member);
   }
 
+  @UseGuards(AuthGuard)
   @Put('updateMemberInfo/:memberId')
+  @ApiOperation({
+    summary: 'Update member general info',
+    description: 'Updates the general information of an existing member.',
+  })
+  @ApiOkResponse({
+    description: 'Member updated successfully',
+    schema: {
+      example: {
+        isSuccessful: true,
+        data: { _id: '679d017daf1fff94edac0c1a' },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid member ID',
+    schema: {
+      example: { isSuccessful: false, message: 'El miembro no es válido' },
+    },
+  })
+  @ApiParam({
+    name: 'memberId',
+    required: true,
+    description: 'Member ID',
+  })
+  @ApiBody({ type: MemberGeneralInfoDto })
   async updateMemberGeneralInfo(
     @Param('memberId') memberId: string,
     @Body() updatedMember: MemberGeneralInfoDto,
@@ -104,7 +215,27 @@ export class MemberController {
     );
   }
 
+  @UseGuards(AuthGuard)
   @Put('updateAcademicStudy/:memberId')
+  @ApiOperation({
+    summary: 'Update academic studies',
+    description: 'Updates the additional academic studies of a member.',
+  })
+  @ApiOkResponse({
+    description: 'Academic studies updated successfully',
+    schema: {
+      example: {
+        isSuccessful: true,
+        data: { _id: '679d017daf1fff94edac0c1a' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'memberId',
+    required: true,
+    description: 'Member ID',
+  })
+  @ApiBody({ type: AdditionalAcademicStudyDto })
   async updateAdditionalAcademicStudies(
     @Param('memberId') memberId: string,
     @Body() additionalAcademicData: AdditionalAcademicStudyDto,
@@ -115,7 +246,27 @@ export class MemberController {
     );
   }
 
+  @UseGuards(AuthGuard)
   @Put('updateRelativeInfo/:memberId')
+  @ApiOperation({
+    summary: 'Update relative information',
+    description: 'Updates the relatives / family information of a member.',
+  })
+  @ApiOkResponse({
+    description: 'Relative information updated successfully',
+    schema: {
+      example: {
+        isSuccessful: true,
+        data: { _id: '679d017daf1fff94edac0c1a' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'memberId',
+    required: true,
+    description: 'Member ID',
+  })
+  @ApiBody({ type: RelativeDto })
   async updateRelativeInformation(
     @Param('memberId') memberId: string,
     @Body() relativeData: RelativeDto,
@@ -126,7 +277,28 @@ export class MemberController {
     );
   }
 
+  @UseGuards(AuthGuard)
   @Put('updateMinistryStudiesInfo/:memberId')
+  @ApiOperation({
+    summary: 'Update ministry studies',
+    description:
+      'Updates the ministry / biblical studies information of a member.',
+  })
+  @ApiOkResponse({
+    description: 'Ministry studies updated successfully',
+    schema: {
+      example: {
+        isSuccessful: true,
+        data: { _id: '679d017daf1fff94edac0c1a' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'memberId',
+    required: true,
+    description: 'Member ID',
+  })
+  @ApiBody({ type: MemberMinistryStudyDto })
   async updateMinistryStudies(
     @Param('memberId') memberId: string,
     @Body() ministryStudiesData: MemberMinistryStudyDto,
@@ -137,7 +309,28 @@ export class MemberController {
     );
   }
 
+  @UseGuards(AuthGuard)
   @Put('updateWorkfrontsInfo/:memberId')
+  @ApiOperation({
+    summary: 'Update workfront assignments',
+    description:
+      'Updates the workfront (ministry front) assignments of a member.',
+  })
+  @ApiOkResponse({
+    description: 'Workfront assignments updated successfully',
+    schema: {
+      example: {
+        isSuccessful: true,
+        data: { _id: '679d017daf1fff94edac0c1a' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'memberId',
+    required: true,
+    description: 'Member ID',
+  })
+  @ApiBody({ type: MemberWorkFrontDto })
   async updateWorkfronts(
     @Param('memberId') memberId: string,
     @Body() workfrontData: MemberWorkFrontDto,
