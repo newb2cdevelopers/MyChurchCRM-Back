@@ -9,19 +9,26 @@ import {
   MemberWorkFrontDto,
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
+import { PaginatedResult } from 'src/dtos/pagination.dto';
 
 @Injectable()
 export class MemberBusiness {
   constructor(private readonly provider: MemberProvider) {}
 
   async getAllMembers(
-    churchId: string = null,
-    workfrontId: string = null,
-  ): Promise<Members[]> {
+    churchId?: string,
+    workfrontId?: string,
+    search?: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<Members>> {
     return this.provider.getAllMembers(
       churchId,
       workfrontId,
-    ) as unknown as Promise<Members[]>;
+      search,
+      page,
+      limit,
+    ) as unknown as Promise<PaginatedResult<Members>>;
   }
 
   async getMemberByIdOrDocument(

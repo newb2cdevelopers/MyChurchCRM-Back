@@ -23,6 +23,7 @@ import {
   MemberWorkFrontDto,
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
+import { PaginatedResult } from 'src/dtos/pagination.dto';
 import { MAINWORKFRONTID } from 'src/Constants';
 @ApiTags('Members')
 @Controller('member')
@@ -32,13 +33,20 @@ export class MemberController {
   @UseGuards(AuthGuard)
   @Get()
   @ApiCreatedResponse({ description: 'Member Info' })
-  async getMembers(@Query() query, @Request() req): Promise<Members[]> {
+  async getMembers(
+    @Query('churchId') churchId: string,
+    @Query('search') search: string,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+    @Request() req,
+  ): Promise<PaginatedResult<Members>> {
     let workfrontId = req.user.workfront && req.user.workfront.toString();
 
-    console.log('workfrontId:', workfrontId);
-
     if (!workfrontId) {
-      return [];
+      return {
+        data: [],
+        metadata: { currentPage: 1, totalPages: 0, totalRecords: 0 },
+      };
     }
 
     if (workfrontId === MAINWORKFRONTID) {
@@ -46,8 +54,11 @@ export class MemberController {
     }
 
     return await this.memberBusiness.getAllMembers(
-      query && query.churchId,
+      churchId,
       workfrontId,
+      search,
+      page,
+      limit,
     );
   }
 

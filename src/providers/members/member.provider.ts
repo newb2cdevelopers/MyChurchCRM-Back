@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, FilterQuery } from 'mongoose';
 import { Members, MemberDocument } from 'src/schemas/member/member.shema';
 import {
   MemberGeneralInfoDto,
@@ -10,6 +10,7 @@ import {
   MemberWorkFrontDto,
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
+import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
 
 @Injectable()
 export class MemberProvider {
@@ -17,43 +18,46 @@ export class MemberProvider {
     @InjectModel(Members.name) private memberModel: Model<MemberDocument>,
   ) {}
 
-  async getAllMembers(churchId: string = null, workfrontId: string = null) {
+  async getAllMembers(
+    churchId?: string,
+    workfrontId?: string,
+    search?: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<Members>> {
+    const { skip } = calculatePagination({ page, limit });
+
+    const filter: FilterQuery<MemberDocument> = {};
     if (churchId) {
-      if (workfrontId) {
-        return this.memberModel
-          .find({
-            churchId: churchId,
-            workfront: workfrontId,
-          })
-          .sort({ createdAt: -1 })
-          .populate({
-            path: 'workfront',
-            model: 'Workfront',
-          })
-          .lean();
-      }
-      return this.memberModel
-        .find({
-          churchId: churchId,
-        })
-        .sort({ createdAt: -1 })
-        .populate({
-          path: 'workfront',
-          model: 'Workfront',
-        })
-        .lean();
+      filter.churchId = churchId;
     }
-
     if (workfrontId) {
-      return this.memberModel
-        .find({
-          workfront: workfrontId,
-        })
-        .sort({ createdAt: -1 })
-        .lean();
+      filter.workfront = workfrontId;
     }
 
-    return this.memberModel.find().sort({ createdAt: -1 }).lean();
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      filter.$or = [{ fullName: regex }, { documentNumber: regex }];
+    }
+
+    const baseQuery = this.memberModel.find(filter).sort({ createdAt: -1 });
+
+    const populatedQuery = churchId
+      ? baseQuery.populate({ path: 'workfront', model: 'Workfront' })
+      : baseQuery;
+
+    const [data, totalRecords] = await Promise.all([
+      populatedQuery.skip(skip).limit(limit || 10),
+      this.memberModel.countDocuments(filter),
+    ]);
+
+    const { page: currentPage, limit: pageSize } = calculatePagination({
+      page,
+      limit,
+    });
+    const totalPages = Math.ceil(totalRecords / pageSize);
+
+    return { data, metadata: { currentPage, totalPages, totalRecords } };
   }
 
   async getMemberByIdOrDocument(
@@ -333,7 +337,10 @@ export class MemberProvider {
             },
           );
         } else {
-          const newRelative: any = {
+          const newRelative: Omit<RelativeDto, '_id'> & {
+            isMember?: boolean;
+            Member?: unknown;
+          } = {
             name: relativeData.name,
             address: relativeData.address,
             mobilePhone: relativeData.mobilePhone,

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, FilterQuery } from 'mongoose';
 import {
   FamilyGroup,
   FamilyGroupDocument,
@@ -16,6 +16,7 @@ import {
 import { Users, UserDocument } from 'src/schemas/user/user.schema';
 
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
+import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
 
 @Injectable()
 export class FamilyGroupProvider {
@@ -30,25 +31,66 @@ export class FamilyGroupProvider {
     private familyGroupAttendanceModel: Model<FamilyGroupAttendanceDocument>,
   ) {}
 
-  async getAllFamilyGroups(churchId: string = null) {
-    console.log(churchId);
+  async getFamilyGroupById(id: string) {
+    return this.familyGroupModel.findById(id).populate([
+      'leader',
+      {
+        path: 'neighborhood',
+        populate: {
+          path: 'locality',
+          populate: { path: 'zone' },
+        },
+      },
+    ]);
+  }
 
+  async getAllFamilyGroups(
+    churchId?: string,
+    search?: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<FamilyGroup>> {
+    const { skip } = calculatePagination({ page, limit });
+
+    let filter: FilterQuery<FamilyGroupDocument> = {};
     if (churchId) {
-      // Find all members that belong to the specified church
       const membersInChurch = await this.memberModel
         .find({ churchId })
         .select('_id');
       const memberIds = membersInChurch.map((member) => member._id);
-
-      console.log(memberIds);
-
-      // Filter family groups where the leader is one of the members from that church
-      return this.familyGroupModel
-        .find({ leader: { $in: memberIds } })
-        .populate(['leader', 'neighborhood']);
+      filter = { leader: { $in: memberIds } };
     }
 
-    return this.familyGroupModel.find().populate(['leader', 'neighborhood']);
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      const leaderMatches = await this.memberModel
+        .find({ fullName: regex })
+        .select('_id');
+      const leaderIds = leaderMatches.map((m) => m._id);
+      filter.$or = [
+        { code: regex },
+        { address: regex },
+        { day: regex },
+        { leader: { $in: leaderIds } },
+      ];
+    }
+
+    const [data, totalRecords] = await Promise.all([
+      this.familyGroupModel
+        .find(filter)
+        .skip(skip)
+        .limit(limit || 10)
+        .populate(['leader', 'neighborhood']),
+      this.familyGroupModel.countDocuments(filter),
+    ]);
+
+    const { page: currentPage, limit: pageSize } = calculatePagination({
+      page,
+      limit,
+    });
+    const totalPages = Math.ceil(totalRecords / pageSize);
+
+    return { data, metadata: { currentPage, totalPages, totalRecords } };
   }
 
   async getFamilyGroupAttendance(familyGroupId: string) {
@@ -62,7 +104,7 @@ export class FamilyGroupProvider {
   }
 
   async create(familyGroup: FamilyGroup): Promise<GeneralResponse> {
-    let response: GeneralResponse = { isSuccessful: true };
+    const response: GeneralResponse = { isSuccessful: true };
 
     try {
       const existinGroup = await this.familyGroupModel.findOne({
@@ -110,7 +152,7 @@ export class FamilyGroupProvider {
   }
 
   async update(familyGroup: FamilyGroup): Promise<GeneralResponse> {
-    let response: GeneralResponse = { isSuccessful: true };
+    const response: GeneralResponse = { isSuccessful: true };
 
     if (!familyGroup._id) {
       response.message = 'El grupo familiar no es válido';
@@ -118,7 +160,7 @@ export class FamilyGroupProvider {
       return response;
     }
 
-    var id = familyGroup._id;
+    const id = familyGroup._id;
 
     const existingGroup = await this.familyGroupModel.findOne({
       id: id,
@@ -177,7 +219,7 @@ export class FamilyGroupProvider {
   async registerFamilyGroupAttendance(
     familyGroupAttendance: FamilyGroupAttendance,
   ): Promise<GeneralResponse> {
-    let response: GeneralResponse = { isSuccessful: true };
+    const response: GeneralResponse = { isSuccessful: true };
 
     try {
       const existingGroup = await this.familyGroupModel.findOne({
@@ -259,7 +301,7 @@ export class FamilyGroupProvider {
     familyGroupId: string,
     familyMemberData: FamilyGroupMember,
   ): Promise<GeneralResponse> {
-    let response: GeneralResponse = { isSuccessful: true };
+    const response: GeneralResponse = { isSuccessful: true };
 
     try {
       const existingFamilyGroup = await this.familyGroupModel.findOne({

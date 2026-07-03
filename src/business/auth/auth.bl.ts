@@ -375,6 +375,9 @@ export class AuthBusiness {
       functionalities = functionalities.concat(role.Functionalities);
     });
 
+    // Exclude functionalities whose module is inactive
+    functionalities = functionalities.filter((f) => f.module?.active !== false);
+
     // Group functionalities by module name
     const groupByModule = functionalities.reduce(
       (group: Record<string, FunctionalityWithModule[]>, functionality) => {

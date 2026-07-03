@@ -24,6 +24,7 @@ export interface RoleWithFunctionalities {
 export interface FunctionalityWithModule {
   module: {
     name: string;
+    active: boolean;
   };
   [key: string]: unknown;
 }
