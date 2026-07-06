@@ -63,6 +63,7 @@ class MemberAttendace {
 
 const MemberAttendaceSchema = SchemaFactory.createForClass(MemberAttendace);
 
+@Schema()
 export class FamilyGroupAttendance {
   _id: number;
 

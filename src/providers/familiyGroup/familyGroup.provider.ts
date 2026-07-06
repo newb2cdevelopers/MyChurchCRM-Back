@@ -101,11 +101,9 @@ export class FamilyGroupProvider {
   async getFamilyGroupAttendance(familyGroupId: string) {
     console.log(familyGroupId);
 
-    return this.familyGroupAttendanceModel
-      .find({
-        familyGroup: familyGroupId,
-      })
-      .populate(['familyGroup']);
+    return this.familyGroupAttendanceModel.find({
+      familyGroup: familyGroupId,
+    });
   }
 
   async create(familyGroup: CreateFamilyGroupDto): Promise<GeneralResponse> {
@@ -133,7 +131,7 @@ export class FamilyGroupProvider {
       }
 
       const existingNeighborhood = await this.neighborhoodModel.findOne({
-        id: familyGroup.neighborhood,
+        _id: familyGroup.neighborhood,
       });
 
       if (!existingNeighborhood) {
@@ -189,7 +187,7 @@ export class FamilyGroupProvider {
     }
 
     const existingNeighborhood = await this.neighborhoodModel.findOne({
-      id: familyGroup.neighborhood,
+      _id: familyGroup.neighborhood,
     });
 
     if (!existingNeighborhood) {
@@ -229,7 +227,7 @@ export class FamilyGroupProvider {
 
     try {
       const existingGroup = await this.familyGroupModel.findOne({
-        id: familyGroupAttendance.familyGroup,
+        _id: familyGroupAttendance.familyGroup,
       });
 
       if (!existingGroup) {
