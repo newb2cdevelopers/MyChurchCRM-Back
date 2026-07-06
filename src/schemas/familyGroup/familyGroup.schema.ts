@@ -47,6 +47,7 @@ const FamilyGroupMemberSchema = SchemaFactory.createForClass(FamilyGroupMember);
 const familyGroupExample =
   '[{"name": "Carlos Mario", "documentNumber": "123456", "documentType": "CC", "address": "CR 20 # 40", "mobilePhone": "316929417", "email": "carlos@gmail.com", "birthDate": "22/06/2000", "startingDate": "20/06/2020", "comments": "Test"}]';
 
+@Schema()
 class MemberAttendace {
   _id: number;
 

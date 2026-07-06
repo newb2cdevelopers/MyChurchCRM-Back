@@ -1,10 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsBoolean,
   IsOptional,
   IsNotEmpty,
   IsMongoId,
+  ValidateNested,
 } from 'class-validator';
 
 export class CreateFamilyGroupDto {
@@ -125,6 +127,8 @@ export class RegisterAttendanceDto {
   lessonName: string;
 
   @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => MemberAttendanceDto)
   @ApiPropertyOptional({ type: [MemberAttendanceDto] })
   membersAttendance?: MemberAttendanceDto[];
 
