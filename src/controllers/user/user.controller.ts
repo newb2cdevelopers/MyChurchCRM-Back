@@ -6,18 +6,32 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
   Logger,
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { Auth } from 'src/modules/auth/auth.decorator';
+import { JWTPayload } from 'src/schemas/auth/JWTPayload';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UserBusiness } from 'src/business/user/user.bl';
 import { Users } from 'src/schemas/user/user.schema';
-import { UserDTO, userEmailDTO } from 'src/schemas/user/user.DTO';
+import {
+  UserDTO,
+  UpdateUserDTO,
+  userEmailDTO,
+} from 'src/schemas/user/user.DTO';
 import { AuthBusiness } from 'src/business/auth/auth.bl';
 import { AuthTokenResponse } from 'src/interfaces/auth.interfaces';
+import { PaginatedResult } from 'src/dtos/pagination.dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -30,13 +44,58 @@ export class UserController {
   ) {}
 
   @Get()
-  async getAllUsers(): Promise<Users[]> {
-    return await this.userBl.getAllUsers();
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Get all users',
+    description:
+      "Returns a paginated list of users filtered by the logged user's church. Supports search by name, last name or email, and pagination via page and limit query params.",
+  })
+  @ApiOkResponse({
+    description: 'Paginated list of users',
+    schema: {
+      example: {
+        data: [
+          {
+            _id: '679d017daf1fff94edac0c1a',
+            name: 'Carlos',
+            lastName: 'Mario',
+            email: 'carlos@example.com',
+            active: true,
+            roles: [{ _id: '631ff3154ead3f03c943cfb1', name: 'Administrador' }],
+          },
+        ],
+        metadata: { currentPage: 1, totalPages: 5, totalRecords: 50 },
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by name, last name or email',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page (max 100)',
+  })
+  async getAllUsers(
+    @Auth() user: JWTPayload,
+    @Query('search') search?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ): Promise<PaginatedResult<Users>> {
+    return await this.userBl.getAllUsers(user.churchId, search, page, limit);
   }
 
   @Get(':id')
   @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard)
   async getUserById(@Param('id') id: string): Promise<Users> {
     return await this.userBl.getUserById(id);
   }
@@ -74,9 +133,10 @@ export class UserController {
       );
       return tokens;
     } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(
-        `[newUser] Error registering user: ${error.message}`,
-        error.stack,
+        `[newUser] Error creating user: ${err.message}`,
+        err.stack,
       );
       throw error;
     }
@@ -89,15 +149,15 @@ export class UserController {
 
   @Put(':id')
   @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard)
   async updateUser(
     @Param('id') id: string,
-    @Body() user: UserDTO,
-  ): Promise<UserDTO> {
+    @Body() user: UpdateUserDTO,
+  ): Promise<UpdateUserDTO> {
     return await this.userBl.updateUser(id, user);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Delete(':id')
   async deleteUser(@Param('id') id: string): Promise<void> {

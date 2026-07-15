@@ -1,7 +1,9 @@
 import { Injectable, Logger, ConflictException } from '@nestjs/common';
+import { FilterQuery } from 'mongoose';
 import { UserProvider } from 'src/providers/user/user.provider';
-import { UserDTO } from 'src/schemas/user/user.DTO';
-import { Users } from 'src/schemas/user/user.schema';
+import { UserDTO, UpdateUserDTO } from 'src/schemas/user/user.DTO';
+import { Users, UserDocument } from 'src/schemas/user/user.schema';
+import { PaginatedResult } from 'src/dtos/pagination.dto';
 
 @Injectable()
 export class UserBusiness {
@@ -9,8 +11,22 @@ export class UserBusiness {
 
   constructor(private readonly provider: UserProvider) {}
 
-  async getAllUsers(): Promise<Users[]> {
-    return this.provider.getAllUsers() as unknown as Promise<Users[]>;
+  async getAllUsers(
+    churchId?: string,
+    search?: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<Users>> {
+    const filter: FilterQuery<UserDocument> = {};
+    if (churchId) {
+      filter.churchId = churchId;
+    }
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      filter.$or = [{ name: regex }, { lastName: regex }, { email: regex }];
+    }
+
+    return this.provider.getAllUsers(filter, page, limit);
   }
 
   async getUserById(id: string): Promise<Users> {
@@ -47,19 +63,22 @@ export class UserBusiness {
       );
       return newUser as unknown as Promise<Users>;
     } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(
-        `[newUser] Error creating user: ${error.message}`,
-        error.stack,
+        `[newUser] Error creating user: ${err.message}`,
+        err.stack,
       );
       throw error;
     }
   }
 
-  async updateUser(id: string, user: UserDTO): Promise<Users> {
+  async updateUser(id: string, user: UpdateUserDTO): Promise<Users> {
+    this.logger.log(`[updateUser] Updating user with ID: ${id}`);
     return this.provider.updateUser(id, user) as unknown as Promise<Users>;
   }
 
   async deleteUser(id: string): Promise<void> {
+    this.logger.log(`[deleteUser] Deleting user with ID: ${id}`);
     this.provider.deleteUser(id);
   }
 }

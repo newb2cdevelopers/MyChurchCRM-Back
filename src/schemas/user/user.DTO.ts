@@ -3,9 +3,13 @@ import {
   IsEmail,
   IsNotEmpty,
   IsString,
+  IsBoolean,
+  IsOptional,
+  IsArray,
   MinLength,
   Matches,
 } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
 
 export class userEmailDTO {
   @ApiProperty({ type: String, description: 'User email address' })
@@ -43,4 +47,20 @@ export class UserDTO extends userEmailDTO {
   @IsString({ message: 'Church ID must be a string' })
   @IsNotEmpty({ message: 'Church ID is required' })
   churchId: string;
+}
+
+export class UpdateUserDTO extends PartialType(UserDTO) {
+  @ApiProperty({
+    type: Boolean,
+    required: false,
+    description: 'User active status',
+  })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
+  @ApiProperty({ type: [String], required: false, description: 'Role IDs' })
+  @IsOptional()
+  @IsArray()
+  roles?: string[];
 }

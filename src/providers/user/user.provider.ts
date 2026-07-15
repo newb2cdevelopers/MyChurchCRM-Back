@@ -1,20 +1,41 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, FilterQuery } from 'mongoose';
 import { nanoid } from 'nanoid';
-import { UserDTO } from 'src/schemas/user/user.DTO';
+import { UserDTO, UpdateUserDTO } from 'src/schemas/user/user.DTO';
 import { Users, UserDocument } from 'src/schemas/user/user.schema';
+import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
 
 @Injectable()
 export class UserProvider {
-  private readonly logger = new Logger(UserProvider.name);
-
   constructor(
     @InjectModel(Users.name) private userModel: Model<UserDocument>,
   ) {}
 
-  async getAllUsers() {
-    return this.userModel.find();
+  async getAllUsers(
+    filter: FilterQuery<UserDocument>,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<Users>> {
+    const { skip } = calculatePagination({ page, limit });
+
+    const [data, totalRecords] = await Promise.all([
+      this.userModel
+        .find(filter)
+        .skip(skip)
+        .limit(limit || 10)
+        .select('-password -__v -confirmToken')
+        .populate('roles'),
+      this.userModel.countDocuments(filter),
+    ]);
+
+    const { page: currentPage, limit: pageSize } = calculatePagination({
+      page,
+      limit,
+    });
+    const totalPages = Math.ceil(totalRecords / pageSize);
+
+    return { data, metadata: { currentPage, totalPages, totalRecords } };
   }
 
   async getUserById(id: string) {
@@ -22,64 +43,23 @@ export class UserProvider {
   }
 
   async getUserByEmail(email: string) {
-    this.logger.log(`[getUserByEmail] Searching for user with email: ${email}`);
-    const user = await this.userModel
-      .findOne({ email })
-      .select('-__v -confirmToken');
-    if (user) {
-      this.logger.log(`[getUserByEmail] User found with ID: ${user._id}`);
-    } else {
-      this.logger.log(`[getUserByEmail] No user found with email: ${email}`);
-    }
-    return user;
+    return this.userModel.findOne({ email }).select('-__v -confirmToken');
   }
 
   async newUser(user: UserDTO) {
-    this.logger.log(`[newUser] Creating new user with email: ${user.email}`);
     const confirmToken = nanoid(32);
-    this.logger.log(
-      `[newUser] Generated confirmation token for user: ${user.email}`,
-    );
-
-    try {
-      const createdUser = await this.userModel.create({
-        ...user,
-        confirmToken,
-        workfront: null,
-      });
-      this.logger.log(
-        `[newUser] User created successfully in database with ID: ${createdUser._id}`,
-      );
-      return createdUser;
-    } catch (error) {
-      this.logger.error(
-        `[newUser] Database error creating user: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
+    return this.userModel.create({
+      ...user,
+      confirmToken,
+      workfront: null,
+    });
   }
 
-  async updateUser(id: string, user: UserDTO) {
-    return this.userModel.updateOne(
-      {
-        _id: id,
-      },
-      user,
-    );
+  async updateUser(id: string, user: UpdateUserDTO) {
+    return this.userModel.updateOne({ _id: id }, user);
   }
 
-  /**
-   * Updates user password securely
-   * Uses findById + save() to trigger the pre-save hook in User schema
-   * which automatically hashes the password before storing
-   * @param userId - User's MongoDB ObjectId
-   * @param newPassword - Plain text password (will be hashed by pre-save hook)
-   * @returns Object indicating the number of documents modified
-   * @throws Error if user not found
-   */
   async updatePassword(userId: string, newPassword: string) {
-    // Use findById + save to trigger pre-save hook that hashes the password
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new Error('User not found');
@@ -92,8 +72,6 @@ export class UserProvider {
   }
 
   async deleteUser(id: string) {
-    this.userModel.deleteOne({
-      _id: id,
-    });
+    this.userModel.deleteOne({ _id: id });
   }
 }
