@@ -63,4 +63,9 @@ export class UpdateUserDTO extends PartialType(UserDTO) {
   @IsOptional()
   @IsArray()
   roles?: string[];
+
+  @ApiProperty({ type: String, required: false, description: 'Zone ID' })
+  @IsOptional()
+  @IsString()
+  zoneId?: string;
 }

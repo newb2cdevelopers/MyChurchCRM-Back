@@ -31,11 +31,14 @@ export class Users {
   @Prop({ required: true })
   confirmToken: string;
 
-  @Prop({default: false })
+  @Prop({ default: false })
   active: boolean;
 
-  @Prop({type: [mongoose.Schema.Types.ObjectId], ref: 'Role' })
-  roles: string [] 
+  @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'Role' })
+  roles: string[];
+
+  @Prop({ required: false, type: mongoose.Schema.Types.ObjectId, ref: 'Zone' })
+  zoneId: string;
 
   comparePassword: (candidatePassword: string) => boolean;
 }
@@ -46,7 +49,7 @@ export const UserSchema = SchemaFactory.createForClass(Users);
 
 UserSchema.index({ email: 1 });
 
-UserSchema.pre('save', async function (next: any) {
+UserSchema.pre('save', async function (next: (err?: Error) => void) {
   const user = this as UserDocument;
 
   // only hash the password if it has been modified (or is new)

@@ -9,9 +9,7 @@ import {
   Query,
   UseGuards,
   Logger,
-  Req,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { Auth } from 'src/modules/auth/auth.decorator';
 import { JWTPayload } from 'src/schemas/auth/JWTPayload';
@@ -29,8 +27,6 @@ import {
   UpdateUserDTO,
   userEmailDTO,
 } from 'src/schemas/user/user.DTO';
-import { AuthBusiness } from 'src/business/auth/auth.bl';
-import { AuthTokenResponse } from 'src/interfaces/auth.interfaces';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
 
 @ApiTags('User')
@@ -38,10 +34,7 @@ import { PaginatedResult } from 'src/dtos/pagination.dto';
 export class UserController {
   private readonly logger = new Logger(UserController.name);
 
-  constructor(
-    private readonly userBl: UserBusiness,
-    private readonly authBusiness: AuthBusiness,
-  ) {}
+  constructor(private readonly userBl: UserBusiness) {}
 
   @Get()
   @ApiBearerAuth()
@@ -89,7 +82,7 @@ export class UserController {
     @Query('search') search?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
-  ): Promise<PaginatedResult<Users>> {
+  ): Promise<PaginatedResult<Users & { isMember: boolean }>> {
     return await this.userBl.getAllUsers(user.churchId, search, page, limit);
   }
 
@@ -101,37 +94,17 @@ export class UserController {
   }
 
   @Post()
-  async newUser(
-    @Body() user: UserDTO,
-    @Req() request: Request,
-  ): Promise<AuthTokenResponse> {
+  async newUser(@Body() user: UserDTO): Promise<{ message: string }> {
     this.logger.log(
       `[newUser] Starting user registration for email: ${user.email}`,
     );
     try {
-      // Create the user
-      const result = await this.userBl.newUser(user);
-      this.logger.log(
-        `[newUser] User registered successfully with ID: ${result._id}`,
-      );
-
-      // Generate tokens for auto-login (same as login endpoint)
-      const ipAddress = request.ip || request.socket.remoteAddress;
-      const userAgent = request.headers['user-agent'];
-
-      this.logger.log(
-        `[newUser] Generating tokens for auto-login: ${user.email}`,
-      );
-      const tokens = await this.authBusiness.generateAccessToken(
-        user.email,
-        ipAddress,
-        userAgent,
-      );
-
-      this.logger.log(
-        `[newUser] User registered and logged in successfully: ${user.email}`,
-      );
-      return tokens;
+      await this.userBl.newUser(user);
+      this.logger.log(`[newUser] User registered successfully: ${user.email}`);
+      return {
+        message:
+          'Usuario registrado exitosamente. Su cuenta está pendiente de activación.',
+      };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(

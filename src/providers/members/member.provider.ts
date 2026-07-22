@@ -60,6 +60,13 @@ export class MemberProvider {
     return { data, metadata: { currentPage, totalPages, totalRecords } };
   }
 
+  async findByEmails(emails: string[]): Promise<Pick<Members, 'email'>[]> {
+    return await this.memberModel
+      .find({ email: { $in: emails } })
+      .select('email')
+      .lean();
+  }
+
   async getMemberById(id: string): Promise<Members> {
     return await this.memberModel.findById(id).populate({
       path: 'workfront',
