@@ -83,6 +83,7 @@ export class FamilyGroupProvider {
     const [data, totalRecords] = await Promise.all([
       this.familyGroupModel
         .find(filter)
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit || 10)
         .populate(['leader', 'neighborhood']),

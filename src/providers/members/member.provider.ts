@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery } from 'mongoose';
 import { Members, MemberDocument } from 'src/schemas/member/member.shema';
+import { Users, UserDocument } from 'src/schemas/user/user.schema';
 import {
   MemberGeneralInfoDto,
   AdditionalAcademicStudyDto,
@@ -16,6 +17,7 @@ import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
 export class MemberProvider {
   constructor(
     @InjectModel(Members.name) private memberModel: Model<MemberDocument>,
+    @InjectModel(Users.name) private userModel: Model<UserDocument>,
   ) {}
 
   async getAllMembers(
@@ -65,6 +67,24 @@ export class MemberProvider {
       .find({ email: { $in: emails } })
       .select('email')
       .lean();
+  }
+
+  async findByDocument(
+    documentType: string,
+    documentNumber: string,
+  ): Promise<Members> {
+    return await this.memberModel.findOne({ documentType, documentNumber });
+  }
+
+  async linkUserByDocument(
+    documentType: string,
+    documentNumber: string,
+    memberId: string,
+  ): Promise<void> {
+    await this.userModel.updateOne(
+      { documentType, documentNumber },
+      { memberId },
+    );
   }
 
   async getMemberById(id: string): Promise<Members> {

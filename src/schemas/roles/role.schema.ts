@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 
-@Schema()
+@Schema({ timestamps: true })
 export class Role {
   _id: number;
 
@@ -11,8 +11,8 @@ export class Role {
   @Prop({ required: true })
   active: boolean;
 
-  @Prop({type: [mongoose.Schema.Types.ObjectId], ref: 'Functionality' })
-  Functionalities: string [] 
+  @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'Functionality' })
+  Functionalities: string[];
 }
 
 export type RoleTextDocument = Role & mongoose.Document;

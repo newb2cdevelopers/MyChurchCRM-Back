@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 
-@Schema()
+@Schema({ timestamps: true })
 export class Users {
   _id: number;
 
@@ -39,6 +39,19 @@ export class Users {
 
   @Prop({ required: false, type: mongoose.Schema.Types.ObjectId, ref: 'Zone' })
   zoneId: string;
+
+  @Prop({ required: true })
+  documentType: string;
+
+  @Prop({ required: true })
+  documentNumber: string;
+
+  @Prop({
+    required: false,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Members',
+  })
+  memberId: string;
 
   comparePassword: (candidatePassword: string) => boolean;
 }

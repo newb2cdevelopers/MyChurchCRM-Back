@@ -22,12 +22,14 @@ export class UserProvider {
     const [data, totalRecords] = await Promise.all([
       this.userModel
         .find(filter)
+        .sort({ createdAt: -1 })
         .lean()
         .skip(skip)
         .limit(limit || 10)
         .select('-password -__v -confirmToken')
         .populate('roles')
-        .populate('zoneId'),
+        .populate('zoneId')
+        .populate('memberId'),
       this.userModel.countDocuments(filter),
     ]);
 

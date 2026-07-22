@@ -74,11 +74,29 @@ export class UserBusiness {
     }
 
     this.logger.log(`[newUser] Creating new user with email: ${user.email}`);
+
     try {
       const newUser = await this.userProvider.newUser(user);
       this.logger.log(
         `[newUser] User created successfully with ID: ${newUser._id}`,
       );
+
+      // Link user to member if exists
+      const member = await this.memberProvider.findByDocument(
+        user.documentType,
+        user.documentNumber,
+      );
+
+      if (member) {
+        await this.userProvider.updateUser(newUser._id, {
+          memberId: String(member._id),
+        } as UpdateUserDTO);
+
+        this.logger.log(
+          `[newUser] Linked user ${newUser._id} to member ${member._id}`,
+        );
+      }
+
       return newUser as unknown as Promise<Users>;
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));

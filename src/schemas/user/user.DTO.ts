@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsOptional,
   IsArray,
+  IsIn,
   MinLength,
   Matches,
 } from 'class-validator';
@@ -47,6 +48,19 @@ export class UserDTO extends userEmailDTO {
   @IsString({ message: 'Church ID must be a string' })
   @IsNotEmpty({ message: 'Church ID is required' })
   churchId: string;
+
+  @ApiProperty({ type: String, description: 'Document type' })
+  @IsString({ message: 'Document type must be a string' })
+  @IsNotEmpty({ message: 'Document type is required' })
+  @IsIn(['CC', 'CE', 'NIT', 'Pasaporte'], {
+    message: 'Document type must be one of: CC, CE, NIT, Pasaporte',
+  })
+  documentType: string;
+
+  @ApiProperty({ type: String, description: 'Document number' })
+  @IsString({ message: 'Document number must be a string' })
+  @IsNotEmpty({ message: 'Document number is required' })
+  documentNumber: string;
 }
 
 export class UpdateUserDTO extends PartialType(UserDTO) {
@@ -68,4 +82,9 @@ export class UpdateUserDTO extends PartialType(UserDTO) {
   @IsOptional()
   @IsString()
   zoneId?: string;
+
+  @ApiProperty({ type: String, required: false, description: 'Member ID' })
+  @IsOptional()
+  @IsString()
+  memberId?: string;
 }

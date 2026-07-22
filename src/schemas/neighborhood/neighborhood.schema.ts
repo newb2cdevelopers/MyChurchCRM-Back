@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 import { ApiProperty } from '@nestjs/swagger';
 
-@Schema()
+@Schema({ timestamps: true })
 export class Neighborhood {
   _id: number;
 
@@ -11,8 +11,8 @@ export class Neighborhood {
   name: string;
 
   @ApiProperty({ example: '679d017daf1fff94edac0c1a' })
-  @Prop({type: mongoose.Schema.Types.ObjectId, ref: 'Locality' })
-  locality: string 
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Locality' })
+  locality: string;
 }
 
 export type NeighborhoodTextDocument = Neighborhood & mongoose.Document;

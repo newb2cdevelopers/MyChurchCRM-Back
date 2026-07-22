@@ -36,7 +36,17 @@ export class MemberBusiness {
   }
 
   async create(member: MemberGeneralInfoDto): Promise<GeneralResponse> {
-    return this.provider.create(member) as unknown as Promise<GeneralResponse>;
+    const response = await this.provider.create(member);
+
+    // If the member creation is successful and a user is returned, link the user to the member
+    if (response.isSuccessful && response.data) {
+      await this.provider.linkUserByDocument(
+        member.documentType,
+        member.documentNumber,
+        String(response.data._id),
+      );
+    }
+    return response;
   }
 
   async updateGeneralMemberInfo(
