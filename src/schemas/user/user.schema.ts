@@ -43,7 +43,7 @@ export class Users {
   @Prop({ required: true })
   documentType: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   documentNumber: string;
 
   @Prop({

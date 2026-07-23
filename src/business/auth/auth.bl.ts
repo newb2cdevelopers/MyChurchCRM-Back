@@ -34,12 +34,15 @@ export class AuthBusiness {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(username: string, pass: string): Promise<boolean> {
-    const user = (await this.provider.getUserByEmail(
-      username,
+  async validateUser(identifier: string, pass: string): Promise<Users | null> {
+    const user = (await this.provider.getUserByEmailOrDocument(
+      identifier,
+      true,
     )) as unknown as Users;
-    if (user && user.active) return user.comparePassword(pass);
-    else return false;
+
+    if (user && user.active && (await user.comparePassword(pass))) return user;
+
+    return null;
   }
 
   /**
@@ -186,21 +189,16 @@ export class AuthBusiness {
 
   /**
    * Generates access token and refresh token for user login
-   * @param name - User's email
+   * @param user - Authenticated user (already populated with roles)
    * @param ipAddress - Client's IP address (optional, for auditing)
    * @param userAgent - Client's user agent (optional, for auditing)
    * @returns Object with access_token (1h), refresh_token (7d), user info
    */
   async generateAccessToken(
-    name: string,
+    user: Users,
     ipAddress?: string,
     userAgent?: string,
   ) {
-    const user = (await this.provider.getUserByEmail(
-      name,
-      true,
-    )) as unknown as Users;
-
     // Generate access token (1 hour duration)
     const payload: JWTPayload = {
       userId: user._id.toString(),
@@ -232,6 +230,7 @@ export class AuthBusiness {
     return {
       access_token,
       refresh_token: refreshToken,
+      email: user.email,
       churchId: user.churchId,
       roles: this.generateDashboardInfo(
         user.roles as unknown as RoleWithFunctionalities[],
@@ -309,6 +308,7 @@ export class AuthBusiness {
 
     return {
       access_token,
+      email: user.email,
       churchId: user.churchId,
       roles: this.generateDashboardInfo(
         user.roles as unknown as RoleWithFunctionalities[],

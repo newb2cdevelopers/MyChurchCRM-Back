@@ -27,6 +27,8 @@ import {
   RefreshTokenDTO,
 } from 'src/schemas/auth/login.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
+import { AuthTokenResponse } from 'src/interfaces/auth.interfaces';
+import { InvalidCredentialsException } from 'src/exceptions/auth.exceptions';
 
 @ApiTags('Auth')
 @Controller('login')
@@ -55,17 +57,12 @@ export class AuthController {
   async login(
     @Body() loginDTO: LoginDTO,
     @Req() request: Request,
-  ): Promise<{
-    access_token: string;
-    refresh_token?: string;
-    churchId?: string;
-    roles?: any[];
-    workfront?: any;
-  }> {
+  ): Promise<AuthTokenResponse> {
     const { user, pass } = loginDTO;
-    const valid = await this.authBusiness.validateUser(user, pass);
-    if (!valid) {
-      return { access_token: null };
+    const foundUser = await this.authBusiness.validateUser(user, pass);
+
+    if (!foundUser) {
+      throw new InvalidCredentialsException();
     }
 
     // Extract IP address and user agent for auditing
@@ -73,7 +70,7 @@ export class AuthController {
     const userAgent = request.headers['user-agent'];
 
     return await this.authBusiness.generateAccessToken(
-      user,
+      foundUser,
       ipAddress,
       userAgent,
     );

@@ -43,7 +43,8 @@ export interface GroupedFunctionality {
 export interface AuthTokenResponse {
   access_token: string;
   refresh_token?: string;
+  email?: string;
   churchId?: string;
   roles?: GroupedFunctionality[];
-  workfront?: unknown;
+  workfront?: string | null;
 }
