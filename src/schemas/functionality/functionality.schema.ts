@@ -17,9 +17,6 @@ export class Functionality {
   @Prop({ required: true })
   icon: string;
 
-  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Role' })
-  role: string;
-
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Module' })
   module: string;
 }
