@@ -21,7 +21,7 @@ export class MemberGeneralInfoDto {
   fullName: string;
 
   @IsString()
-  @IsOptional()
+  @IsNotEmpty()
   @ApiProperty({ type: String })
   documentType: string;
 
@@ -66,7 +66,7 @@ export class MemberGeneralInfoDto {
   occupation: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @IsEmail()
   @ApiProperty({ type: String })
   email: string;

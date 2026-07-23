@@ -121,13 +121,13 @@ const RelativeSchema = SchemaFactory.createForClass(Relative);
 export class Members {
   _id: number;
 
-  @Prop({ unique: true })
+  @Prop({ required: true, unique: true })
   documentNumber: string;
 
   @Prop({ required: true })
   fullName: string;
 
-  @Prop()
+  @Prop({ required: true })
   documentType: string;
 
   @Prop({ required: true })
