@@ -246,6 +246,7 @@ export class AuthBusiness {
         permissions as unknown as PopulatedPermission[],
       ),
       workfront: user.workfront || null,
+      zoneId: user.zoneId?.toString() || null,
     };
   }
 
@@ -332,6 +333,7 @@ export class AuthBusiness {
         permissions as unknown as PopulatedPermission[],
       ),
       workfront: user.workfront || null,
+      zoneId: user.zoneId?.toString() || null,
     };
   }
 

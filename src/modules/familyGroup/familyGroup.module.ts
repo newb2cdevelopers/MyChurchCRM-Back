@@ -13,6 +13,8 @@ import {
   Neighborhood,
   NeighborhoodSchema,
 } from 'src/schemas/neighborhood/neighborhood.schema';
+import { Locality, LocalitySchema } from 'src/schemas/locality/locality.schema';
+import { Role, RoleSchema } from 'src/schemas/roles/role.schema';
 import { Users, UserSchema } from 'src/schemas/user/user.schema';
 
 import { FamilyGroupBusiness } from 'src/business/familyGroup/familyGroup.bl';
@@ -32,6 +34,10 @@ import { RolePermissionModule } from 'src/modules/role-permission/role-permissio
     MongooseModule.forFeature([
       { name: Neighborhood.name, schema: NeighborhoodSchema },
     ]),
+    MongooseModule.forFeature([
+      { name: Locality.name, schema: LocalitySchema },
+    ]),
+    MongooseModule.forFeature([{ name: Role.name, schema: RoleSchema }]),
     MongooseModule.forFeature([{ name: Users.name, schema: UserSchema }]),
     RolePermissionModule,
   ],

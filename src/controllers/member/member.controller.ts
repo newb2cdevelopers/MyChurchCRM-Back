@@ -70,17 +70,18 @@ export class MemberController {
     @Query('search') search: string,
     @Query('page') page: number,
     @Query('limit') limit: number,
+    @Query('ignoreWorkfront') ignoreWorkfront: string,
   ): Promise<PaginatedResult<Members>> {
     let workfrontId = user.workfront;
 
-    if (!workfrontId) {
+    if (ignoreWorkfront === 'true') {
+      workfrontId = null;
+    } else if (!workfrontId) {
       return {
         data: [],
         metadata: { currentPage: 1, totalPages: 0, totalRecords: 0 },
       };
-    }
-
-    if (workfrontId === MAINWORKFRONTID) {
+    } else if (workfrontId === MAINWORKFRONTID) {
       workfrontId = null;
     }
 

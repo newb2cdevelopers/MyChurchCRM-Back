@@ -20,12 +20,31 @@ export class FamilyGroupBusiness {
     search?: string,
     page?: number,
     limit?: number,
+    userId?: string,
   ): Promise<PaginatedResult<FamilyGroup>> {
+    let scopeFilter;
+
+    if (userId) {
+      const { roleNames, zoneId, memberId } =
+        await this.provider.getUserScopeInfo(userId);
+
+      if (roleNames.includes('Coordinador Grupos Familiares') && zoneId) {
+        const neighborhoodIds = await this.provider.getNeighborhoodIdsByZone(
+          zoneId,
+        );
+
+        scopeFilter = { neighborhood: { $in: neighborhoodIds } };
+      } else if (roleNames.includes('Líder Grupos Familiares') && memberId) {
+        scopeFilter = { leader: memberId };
+      }
+    }
+
     return this.provider.getAllFamilyGroups(
       churchId,
       search,
       page,
       limit,
+      scopeFilter,
     ) as unknown as Promise<PaginatedResult<FamilyGroup>>;
   }
 

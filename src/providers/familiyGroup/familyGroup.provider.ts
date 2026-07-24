@@ -19,6 +19,10 @@ import {
   NeighborhoodTextDocument,
 } from 'src/schemas/neighborhood/neighborhood.schema';
 import { Users, UserDocument } from 'src/schemas/user/user.schema';
+import {
+  Locality,
+  LocalityTextDocument,
+} from 'src/schemas/locality/locality.schema';
 
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
@@ -32,6 +36,8 @@ export class FamilyGroupProvider {
     @InjectModel(Neighborhood.name)
     private neighborhoodModel: Model<NeighborhoodTextDocument>,
     @InjectModel(Users.name) private userGroupModel: Model<UserDocument>,
+    @InjectModel(Locality.name)
+    private localityModel: Model<LocalityTextDocument>,
     @InjectModel(FamilyGroupAttendance.name)
     private familyGroupAttendanceModel: Model<FamilyGroupAttendanceDocument>,
   ) {}
@@ -49,11 +55,43 @@ export class FamilyGroupProvider {
     ]);
   }
 
+  async getUserScopeInfo(userId: string) {
+    const user = await this.userGroupModel
+      .findById(userId)
+      .populate({ path: 'roles', model: 'Role', select: 'name' })
+      .select('zoneId memberId roles');
+
+    if (!user) return { roleNames: [] as string[] };
+
+    const roles = user.roles as unknown as { name: string }[];
+
+    return {
+      roleNames: roles?.map((r) => r.name) || [],
+      zoneId: user.zoneId?.toString(),
+      memberId: user.memberId?.toString(),
+    };
+  }
+
+  async getNeighborhoodIdsByZone(zoneId: string) {
+    const localities = await this.localityModel
+      .find({ zone: zoneId })
+      .select('_id');
+
+    const localityIds = localities.map((l) => l._id);
+
+    const neighborhoods = await this.neighborhoodModel
+      .find({ locality: { $in: localityIds } })
+      .select('_id');
+
+    return neighborhoods.map((n) => n._id);
+  }
+
   async getAllFamilyGroups(
     churchId?: string,
     search?: string,
     page?: number,
     limit?: number,
+    scopeFilter?: FilterQuery<FamilyGroupDocument>,
   ): Promise<PaginatedResult<FamilyGroup>> {
     const { skip } = calculatePagination({ page, limit });
 
@@ -78,6 +116,10 @@ export class FamilyGroupProvider {
         { day: regex },
         { leader: { $in: leaderIds } },
       ];
+    }
+
+    if (scopeFilter) {
+      filter = { ...filter, ...scopeFilter };
     }
 
     const [data, totalRecords] = await Promise.all([
@@ -319,7 +361,6 @@ export class FamilyGroupProvider {
         return response;
       }
 
-      console.log(existingFamilyGroup);
       try {
         if (familyMemberData.memberId) {
           const filterMember = existingFamilyGroup.members.filter((member) => {
@@ -327,8 +368,6 @@ export class FamilyGroupProvider {
               member._id.toString() === familyMemberData.memberId.toString()
             );
           });
-
-          console.log(filterMember);
 
           if (filterMember.length === 0) {
             response.isSuccessful = false;
@@ -356,6 +395,19 @@ export class FamilyGroupProvider {
             },
           );
         } else {
+          const existingMember = await this.familyGroupModel.findOne({
+            'members.documentNumber': familyMemberData.documentNumber,
+            'members.documentType': familyMemberData.documentType,
+          });
+
+          if (existingMember) {
+            response.isSuccessful = false;
+            response.message =
+              'Este miembro ya está registrado en otro grupo familiar';
+
+            return response;
+          }
+
           const newMember = {
             name: familyMemberData.name,
             documentNumber: familyMemberData.documentNumber,

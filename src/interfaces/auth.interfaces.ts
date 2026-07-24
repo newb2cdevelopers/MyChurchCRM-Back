@@ -71,4 +71,5 @@ export interface AuthTokenResponse {
   churchId?: string;
   roles?: GroupedFunctionality[];
   workfront?: string | null;
+  zoneId?: string | null;
 }

@@ -94,12 +94,14 @@ export class FamiliyGroupController {
     @Query('search') search: string,
     @Query('page') page: number,
     @Query('limit') limit: number,
+    @Auth() user: JWTPayload,
   ): Promise<PaginatedResult<FamilyGroup>> {
     return await this.familyGroupBusiness.getAllFamilyGroups(
       churchId,
       search,
       page,
       limit,
+      user.userId,
     );
   }
 

@@ -30,7 +30,7 @@ export class FamilyGroupMember {
   email: string;
 
   @ApiProperty({ example: '2020-06-22' })
-  @Prop({ required: true })
+  @Prop()
   birthDate: Date;
 
   @ApiProperty({ example: '2020-06-20' })

@@ -145,9 +145,9 @@ export class RegisterFamilyGroupMemberDto {
   memberId?: string;
 
   @IsString()
-  @IsOptional()
-  @ApiPropertyOptional({ example: 'Carlos Mario' })
-  name?: string;
+  @IsNotEmpty()
+  @ApiProperty({ example: 'Carlos Mario' })
+  name: string;
 
   @IsString()
   @IsNotEmpty()
