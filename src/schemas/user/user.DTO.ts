@@ -87,4 +87,9 @@ export class UpdateUserDTO extends PartialType(UserDTO) {
   @IsOptional()
   @IsString()
   memberId?: string;
+
+  @ApiProperty({ type: String, required: false, description: 'Workfront ID' })
+  @IsOptional()
+  @IsString()
+  workfront?: string;
 }
