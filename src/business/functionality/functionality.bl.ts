@@ -14,11 +14,9 @@ export class FunctionalityBusiness {
 
   async CreateFunctionality(
     newFunctionality: Partial<Functionality>,
-    roleIds?: string[],
   ): Promise<Functionality> {
     return this.provider.CreateFunctionality(
       newFunctionality,
-      roleIds,
     ) as unknown as Promise<Functionality>;
   }
 }

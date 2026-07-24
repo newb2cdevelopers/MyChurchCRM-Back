@@ -16,12 +16,8 @@ export class FunctionalityController {
 
   @Post()
   async newFunctionality(
-    @Body() body: Omit<Functionality, '_id'> & { roleIds?: string[] },
+    @Body() functionality: Partial<Functionality>,
   ): Promise<Functionality> {
-    const { roleIds, ...functionalityData } = body;
-    return await this.functionalityBusiness.CreateFunctionality(
-      functionalityData,
-      roleIds,
-    );
+    return await this.functionalityBusiness.CreateFunctionality(functionality);
   }
 }

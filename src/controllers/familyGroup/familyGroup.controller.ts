@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 
 import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { PermissionGuard } from 'src/modules/auth/permission.guard';
+import { Permission } from 'src/modules/auth/permission.decorator';
 import { Auth } from 'src/modules/auth/auth.decorator';
 import { JWTPayload } from 'src/schemas/auth/JWTPayload';
 import { FamilyGroupBusiness } from 'src/business/familyGroup/familyGroup.bl';
@@ -139,7 +141,8 @@ export class FamiliyGroupController {
     return await this.familyGroupBusiness.getFamilyGroupById(id);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('family-groups', 'create_group')
   @Post()
   @ApiOperation({
     summary: 'Create a new family group',
@@ -182,7 +185,8 @@ export class FamiliyGroupController {
     return await this.familyGroupBusiness.create(familyGroup);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('family-groups', 'edit_group')
   @Put(':id')
   @ApiOperation({
     summary: 'Update an existing family group',
@@ -262,7 +266,8 @@ export class FamiliyGroupController {
     );
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('family-groups', 'register_attendance')
   @Post('registerFamilyGroupAttendance')
   @ApiOperation({
     summary: 'Register or update attendance',
@@ -304,7 +309,8 @@ export class FamiliyGroupController {
     );
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('family-groups', 'add_group_member')
   @Post('registerFamilyGroupMember/:familyGroupId')
   @ApiOperation({
     summary: 'Add or update a member within a family group',

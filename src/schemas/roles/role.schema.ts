@@ -10,9 +10,6 @@ export class Role {
 
   @Prop({ required: true })
   active: boolean;
-
-  @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'Functionality' })
-  Functionalities: string[];
 }
 
 export type RoleTextDocument = Role & mongoose.Document;

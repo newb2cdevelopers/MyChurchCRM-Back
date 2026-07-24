@@ -1,31 +1,35 @@
 /**
- * Auth-related interfaces for type safety
- */
-
-/**
  * Payload structure for JWT tokens used in password recovery
  */
 export interface TokenPayload {
   userId: string;
-  iat?: number; // Issued at timestamp
-  exp?: number; // Expiration timestamp
+  iat?: number;
+  exp?: number;
 }
 
 /**
- * Role structure with associated functionalities
+ * Action with its enabled state
  */
-export interface RoleWithFunctionalities {
-  Functionalities: FunctionalityWithModule[];
+export interface ActionResponse {
+  name: string;
+  enabled: boolean;
 }
 
 /**
- * Functionality with its associated module
+ * Functionality with its associated module and permission details
  */
 export interface FunctionalityWithModule {
+  route?: string;
+  name?: string;
+  icon?: string;
   module: {
     name: string;
     active: boolean;
+    icon?: string;
+    route?: string;
   };
+  scope?: string;
+  actions?: ActionResponse[];
   [key: string]: unknown;
 }
 
@@ -35,6 +39,26 @@ export interface FunctionalityWithModule {
 export interface GroupedFunctionality {
   module: string;
   accesses: FunctionalityWithModule[];
+}
+
+/**
+ * Role permission with populated functionality and module
+ */
+export interface PopulatedPermission {
+  scope: string;
+  actions: ActionResponse[];
+  functionalityId: {
+    _id: string;
+    name: string;
+    route: string;
+    icon: string;
+    module: {
+      name: string;
+      active: boolean;
+      icon?: string;
+      route?: string;
+    };
+  };
 }
 
 /**

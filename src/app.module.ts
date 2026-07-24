@@ -12,6 +12,7 @@ import { RoleModule } from './modules/role/role.module';
 import { FunctionalityModule } from './modules/functionality/functionality.module';
 import { ModuleLocalModule } from './modules/module/module.module';
 import { FamilyGroupModule } from './modules/familyGroup/familyGroup.module';
+import { RolePermissionModule } from './modules/role-permission/role-permission.module';
 import { CronService } from '../src/services/cron/cron.service';
 import { EventProvider } from './providers/events/event.provider';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -50,6 +51,7 @@ import { CompanyDirectoryModule } from './modules/companyDirectory/companyDirect
     ModuleLocalModule,
     WorkfrontModule,
     FamilyGroupModule,
+    RolePermissionModule,
     MongooseModule.forFeature([{ name: Events.name, schema: EventSchema }]),
     MongooseModule.forFeature([{ name: Booking.name, schema: BookingSchema }]),
     MongooseModule.forFeature([{ name: Members.name, schema: MemberSchema }]),

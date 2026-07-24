@@ -33,7 +33,7 @@ import {
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
-import { MAINWORKFRONTID } from 'src/Constants';
+import { MAINWORKFRONTID } from 'src/constants/workfront';
 
 @ApiTags('Members')
 @Controller('member')

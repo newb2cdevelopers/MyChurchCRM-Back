@@ -10,10 +10,10 @@ export class RoleProvider {
   ) {}
 
   async getAllRoles() {
-    return this.roleModel.find().populate("Functionalities")
+    return this.roleModel.find();
   }
 
-  async CreateRole(newRole : Role ) {
-    return this.roleModel.create(newRole)
+  async CreateRole(newRole: Role) {
+    return this.roleModel.create(newRole);
   }
 }

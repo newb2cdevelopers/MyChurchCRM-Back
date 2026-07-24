@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthProvider } from 'src/providers/auth/auth.provider';
 import { UserProvider } from 'src/providers/user/user.provider';
 import { RefreshTokenProvider } from 'src/providers/auth/refreshToken.provider';
+import { RolePermissionProvider } from 'src/providers/role-permission/role-permission.provider';
 import { JWTPayload } from 'src/schemas/auth/JWTPayload';
 import { Users } from 'src/schemas/user/user.schema';
 import { key } from '../../modules/auth/constants';
@@ -18,9 +19,9 @@ import {
 } from 'src/exceptions/auth.exceptions';
 import {
   TokenPayload,
-  RoleWithFunctionalities,
   FunctionalityWithModule,
   GroupedFunctionality,
+  PopulatedPermission,
 } from 'src/interfaces/auth.interfaces';
 
 @Injectable()
@@ -31,6 +32,7 @@ export class AuthBusiness {
     private readonly provider: AuthProvider,
     private readonly userProvider: UserProvider,
     private readonly refreshTokenProvider: RefreshTokenProvider,
+    private readonly rolePermissionProvider: RolePermissionProvider,
     private jwtService: JwtService,
   ) {}
 
@@ -227,13 +229,21 @@ export class AuthBusiness {
 
     this.logger.log(`Tokens generated for user: ${user.email}`);
 
+    const roleIds = (user.roles as unknown as { _id: string }[])?.map((r) =>
+      r._id.toString(),
+    );
+
+    const permissions = roleIds?.length
+      ? await this.rolePermissionProvider.findByRoleIds(roleIds)
+      : [];
+
     return {
       access_token,
       refresh_token: refreshToken,
       email: user.email,
       churchId: user.churchId,
       roles: this.generateDashboardInfo(
-        user.roles as unknown as RoleWithFunctionalities[],
+        permissions as unknown as PopulatedPermission[],
       ),
       workfront: user.workfront || null,
     };
@@ -306,12 +316,20 @@ export class AuthBusiness {
 
     this.logger.log(`Access token refreshed for user: ${user.email}`);
 
+    const roleIds = (user.roles as unknown as { _id: string }[])?.map((r) =>
+      r._id.toString(),
+    );
+
+    const permissions = roleIds?.length
+      ? await this.rolePermissionProvider.findByRoleIds(roleIds)
+      : [];
+
     return {
       access_token,
       email: user.email,
       churchId: user.churchId,
       roles: this.generateDashboardInfo(
-        user.roles as unknown as RoleWithFunctionalities[],
+        permissions as unknown as PopulatedPermission[],
       ),
       workfront: user.workfront || null,
     };
@@ -359,24 +377,39 @@ export class AuthBusiness {
 
   /**
    * Organizes user functionalities by module for dashboard display
-   * @param roles - Array of roles with their functionalities
+   * @param permissions - Array of role permissions with populated functionality and module
    * @returns Array of functionalities grouped by module
    */
   generateDashboardInfo(
-    roles: RoleWithFunctionalities[],
+    permissions: PopulatedPermission[],
   ): GroupedFunctionality[] {
-    let functionalities: FunctionalityWithModule[] = [];
+    const functionalities: FunctionalityWithModule[] = [];
 
-    // Collect all functionalities from all roles
-    roles?.forEach((role) => {
-      functionalities = functionalities.concat(role.Functionalities);
+    permissions?.forEach((perm) => {
+      const funcDoc = perm.functionalityId;
+      if (!funcDoc?.module) return;
+
+      functionalities.push({
+        _id: funcDoc._id,
+        name: funcDoc.name,
+        route: funcDoc.route,
+        icon: funcDoc.icon,
+        module: {
+          name: funcDoc.module.name,
+          active: funcDoc.module.active,
+          icon: funcDoc.module.icon,
+          route: funcDoc.module.route,
+        },
+        scope: perm.scope,
+        actions: perm.actions,
+      });
     });
 
     // Exclude functionalities whose module is inactive
-    functionalities = functionalities.filter((f) => f.module?.active !== false);
+    const active = functionalities.filter((f) => f.module?.active !== false);
 
     // Group functionalities by module name
-    const groupByModule = functionalities.reduce(
+    const groupByModule = active.reduce(
       (group: Record<string, FunctionalityWithModule[]>, functionality) => {
         const { module } = functionality;
         group[module.name] = group[module.name] ?? [];

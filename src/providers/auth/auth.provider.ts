@@ -24,14 +24,6 @@ export class AuthProvider {
       query.populate({
         path: 'roles',
         model: 'Role',
-        populate: {
-          path: 'Functionalities',
-          model: 'Functionality',
-          populate: {
-            path: 'module',
-            model: 'Module',
-          },
-        },
       });
     }
 
@@ -45,14 +37,6 @@ export class AuthProvider {
         .populate({
           path: 'roles',
           model: 'Role',
-          populate: {
-            path: 'Functionalities',
-            model: 'Functionality',
-            populate: {
-              path: 'module',
-              model: 'Module',
-            },
-          },
         })
         .select('-__v -confirmToken');
     }
@@ -67,14 +51,6 @@ export class AuthProvider {
         .populate({
           path: 'roles',
           model: 'Role',
-          populate: {
-            path: 'Functionalities',
-            model: 'Functionality',
-            populate: {
-              path: 'module',
-              model: 'Module',
-            },
-          },
         })
         .select('-__v -confirmToken');
     }
