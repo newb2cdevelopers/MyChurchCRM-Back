@@ -28,18 +28,6 @@ export class FunctionalityProvider {
       newFunctionalityModel,
     );
 
-    await this.moduleSystemModel.updateOne(
-      {
-        _id: newFunctionalityModel.module,
-      },
-      {
-        $push: { Functionalities: newFunctionality._id },
-      },
-      {
-        new: true,
-      },
-    );
-
     return newFunctionality;
   }
 }

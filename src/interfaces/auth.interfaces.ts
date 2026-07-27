@@ -27,6 +27,7 @@ export interface FunctionalityWithModule {
     active: boolean;
     icon?: string;
     route?: string;
+    description?: string;
   };
   scope?: string;
   actions?: ActionResponse[];
@@ -57,6 +58,7 @@ export interface PopulatedPermission {
       active: boolean;
       icon?: string;
       route?: string;
+      description?: string;
     };
   };
 }

@@ -23,6 +23,7 @@ import {
   GroupedFunctionality,
   PopulatedPermission,
 } from 'src/interfaces/auth.interfaces';
+import { MODULE_FUNCTIONALITY_ORDER } from 'src/constants/module-functionality-order';
 
 @Injectable()
 export class AuthBusiness {
@@ -401,6 +402,7 @@ export class AuthBusiness {
           active: funcDoc.module.active,
           icon: funcDoc.module.icon,
           route: funcDoc.module.route,
+          description: funcDoc.module.description,
         },
         scope: perm.scope,
         actions: perm.actions,
@@ -427,6 +429,13 @@ export class AuthBusiness {
 
     // Transform grouped data into final format
     groupArray.forEach(([key, value]) => {
+      const moduleRoute = value[0]?.module?.route || '';
+      const order = MODULE_FUNCTIONALITY_ORDER[moduleRoute] || [];
+      value.sort((a, b) => {
+        const aIdx = order.indexOf(a.route as string);
+        const bIdx = order.indexOf(b.route as string);
+        return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+      });
       rolesArray.push({
         module: key,
         accesses: value,

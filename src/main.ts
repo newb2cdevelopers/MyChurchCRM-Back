@@ -9,7 +9,10 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.enableCors();
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 

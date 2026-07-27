@@ -10,10 +10,10 @@ export class ModuleProvider {
   ) {}
 
   async getAllModules() {
-    return this.moduleModel.find().populate("Functionalities");
+    return this.moduleModel.find();
   }
 
-  async CreateModule(newModuleModel : Module ) {
-    return this.moduleModel.create(newModuleModel)
+  async CreateModule(newModuleModel: Module) {
+    return this.moduleModel.create(newModuleModel);
   }
 }
