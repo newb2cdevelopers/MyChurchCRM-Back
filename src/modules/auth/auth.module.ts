@@ -9,6 +9,7 @@ import {
   RefreshToken,
   RefreshTokenSchema,
 } from 'src/schemas/auth/refreshToken.schema';
+import { Church, ChurchSchema } from 'src/schemas/churches/church.schema';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './JwtStrategy';
@@ -26,6 +27,7 @@ import { RolePermissionModule } from 'src/modules/role-permission/role-permissio
     MongooseModule.forFeature([
       { name: Users.name, schema: UserSchema },
       { name: RefreshToken.name, schema: RefreshTokenSchema },
+      { name: Church.name, schema: ChurchSchema },
     ]),
     PassportModule,
     JwtModule.register({

@@ -1,11 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { AuthProvider } from 'src/providers/auth/auth.provider';
 import { UserProvider } from 'src/providers/user/user.provider';
 import { RefreshTokenProvider } from 'src/providers/auth/refreshToken.provider';
 import { RolePermissionProvider } from 'src/providers/role-permission/role-permission.provider';
 import { JWTPayload } from 'src/schemas/auth/JWTPayload';
 import { Users } from 'src/schemas/user/user.schema';
+import { Church } from 'src/schemas/churches/church.schema';
 import { key } from '../../modules/auth/constants';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { sendEmail } from 'src/utilities/emailUtils';
@@ -34,8 +37,20 @@ export class AuthBusiness {
     private readonly userProvider: UserProvider,
     private readonly refreshTokenProvider: RefreshTokenProvider,
     private readonly rolePermissionProvider: RolePermissionProvider,
+    @InjectModel(Church.name) private churchModel: Model<Church>,
     private jwtService: JwtService,
   ) {}
+
+  private async getChurchName(churchId?: string): Promise<string | null> {
+    if (!churchId) return null;
+
+    try {
+      const church = await this.churchModel.findById(churchId);
+      return church?.name || null;
+    } catch {
+      return null;
+    }
+  }
 
   async validateUser(identifier: string, pass: string): Promise<Users | null> {
     const user = (await this.provider.getUserByEmailOrDocument(
@@ -238,11 +253,14 @@ export class AuthBusiness {
       ? await this.rolePermissionProvider.findByRoleIds(roleIds)
       : [];
 
+    const churchName = await this.getChurchName(user.churchId?.toString());
+
     return {
       access_token,
       refresh_token: refreshToken,
       email: user.email,
       churchId: user.churchId,
+      churchName,
       roles: this.generateDashboardInfo(
         permissions as unknown as PopulatedPermission[],
       ),
@@ -326,10 +344,13 @@ export class AuthBusiness {
       ? await this.rolePermissionProvider.findByRoleIds(roleIds)
       : [];
 
+    const churchName = await this.getChurchName(user.churchId?.toString());
+
     return {
       access_token,
       email: user.email,
       churchId: user.churchId,
+      churchName,
       roles: this.generateDashboardInfo(
         permissions as unknown as PopulatedPermission[],
       ),

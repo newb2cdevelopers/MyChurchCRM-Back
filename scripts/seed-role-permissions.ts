@@ -38,8 +38,8 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
     functionalityNames: ['Grupos Familiares'],
     scope: 'all',
     actions: [
-      { name: ACTION_NAMES.CREATE_GROUP, enabled: true },
-      { name: ACTION_NAMES.EDIT_GROUP, enabled: true },
+      { name: ACTION_NAMES.CREATE_GROUP, enabled: false },
+      { name: ACTION_NAMES.EDIT_GROUP, enabled: false },
       { name: ACTION_NAMES.ADD_GROUP_MEMBER, enabled: false },
       { name: ACTION_NAMES.EDIT_GROUP_MEMBER, enabled: false },
       { name: ACTION_NAMES.REMOVE_GROUP_MEMBER, enabled: false },
