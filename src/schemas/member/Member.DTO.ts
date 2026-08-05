@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { DOCUMENT_TYPES } from '../../constants/document-types';
 import {
   IsString,
   IsNumber,
@@ -7,6 +8,7 @@ import {
   IsNotEmpty,
   IsEmail,
   IsDate,
+  IsIn,
 } from 'class-validator';
 
 export class MemberGeneralInfoDto {
@@ -22,6 +24,7 @@ export class MemberGeneralInfoDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsIn(DOCUMENT_TYPES)
   @ApiProperty({ type: String })
   documentType: string;
 
@@ -46,7 +49,7 @@ export class MemberGeneralInfoDto {
   mobilePhone: string;
 
   @IsString()
-  @IsOptional()
+  @IsNotEmpty()
   @ApiProperty({ type: String })
   birthDate: string;
 
@@ -100,6 +103,23 @@ export class MemberGeneralInfoDto {
   @IsNotEmpty()
   @ApiProperty({ type: String })
   churchId: string;
+}
+
+export class ChangeMemberStatusDto {
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(['active', 'inactive'])
+  @ApiProperty({
+    type: String,
+    enum: ['active', 'inactive'],
+    description: 'New member status',
+  })
+  status: string;
+
+  @IsString()
+  @IsOptional()
+  @ApiProperty({ type: String, description: 'Reason for inactivation' })
+  inactiveReason?: string;
 }
 
 export class AdditionalAcademicStudyDto {

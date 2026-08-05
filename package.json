@@ -21,7 +21,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "start:azure": "npm run build && func host start",
     "migrate:users": "ts-node scripts/backfill-user-documents.ts",
-    "seed:permissions": "ts-node scripts/seed-role-permissions.ts"
+    "seed:permissions": "ts-node scripts/seed-role-permissions.ts",
+    "migrate:member-status": "ts-node scripts/migrate-member-status-index.ts"
   },
   "dependencies": {
     "@azure/functions": "^1.0.3",

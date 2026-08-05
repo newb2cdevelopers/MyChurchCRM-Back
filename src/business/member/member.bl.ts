@@ -7,6 +7,7 @@ import {
   RelativeDto,
   MemberMinistryStudyDto,
   MemberWorkFrontDto,
+  ChangeMemberStatusDto,
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
@@ -19,6 +20,7 @@ export class MemberBusiness {
     churchId?: string,
     workfrontId?: string,
     search?: string,
+    status?: string,
     page?: number,
     limit?: number,
   ): Promise<PaginatedResult<Members>> {
@@ -26,6 +28,7 @@ export class MemberBusiness {
       churchId,
       workfrontId,
       search,
+      status,
       page,
       limit,
     ) as unknown as Promise<PaginatedResult<Members>>;
@@ -33,6 +36,13 @@ export class MemberBusiness {
 
   async getMemberById(id: string): Promise<Members> {
     return await this.provider.getMemberById(id);
+  }
+
+  async changeStatus(
+    memberId: string,
+    statusData: ChangeMemberStatusDto,
+  ): Promise<GeneralResponse> {
+    return this.provider.changeStatus(memberId, statusData);
   }
 
   async create(member: MemberGeneralInfoDto): Promise<GeneralResponse> {
@@ -43,6 +53,7 @@ export class MemberBusiness {
       await this.provider.linkUserByDocument(
         member.documentType,
         member.documentNumber,
+        member.churchId,
         String(response.data._id),
       );
     }

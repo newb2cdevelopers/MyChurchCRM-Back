@@ -121,7 +121,7 @@ const RelativeSchema = SchemaFactory.createForClass(Relative);
 export class Members {
   _id: number;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   documentNumber: string;
 
   @Prop({ required: true })
@@ -178,6 +178,15 @@ export class Members {
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Church' })
   churchId: string;
 
+  @Prop({ default: 'active', enum: ['active', 'inactive'] })
+  status: string;
+
+  @Prop()
+  inactiveDate: Date;
+
+  @Prop()
+  inactiveReason: string;
+
   @Prop({ type: [MemberWorkFrontSchema], default: [] })
   workFronts: [MemberWorkFront];
 
@@ -196,3 +205,4 @@ export type MemberDocument = Members & mongoose.Document;
 
 export const MemberSchema = SchemaFactory.createForClass(Members);
 MemberSchema.index({ churchId: 1, createdAt: -1 });
+MemberSchema.index({ documentNumber: 1, churchId: 1 }, { unique: true });

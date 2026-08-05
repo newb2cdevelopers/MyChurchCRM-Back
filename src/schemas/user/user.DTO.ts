@@ -11,6 +11,7 @@ import {
   Matches,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
+import { DOCUMENT_TYPES } from '../../constants/document-types';
 
 export class userEmailDTO {
   @ApiProperty({ type: String, description: 'User email address' })
@@ -52,8 +53,8 @@ export class UserDTO extends userEmailDTO {
   @ApiProperty({ type: String, description: 'Document type' })
   @IsString({ message: 'Document type must be a string' })
   @IsNotEmpty({ message: 'Document type is required' })
-  @IsIn(['CC', 'CE', 'NIT', 'Pasaporte'], {
-    message: 'Document type must be one of: CC, CE, NIT, Pasaporte',
+  @IsIn(DOCUMENT_TYPES, {
+    message: `Document type must be one of: ${DOCUMENT_TYPES.join(', ')}`,
   })
   documentType: string;
 

@@ -1,16 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-
+import { IsIn, IsString } from 'class-validator';
+import { DOCUMENT_TYPES } from '../../constants/document-types';
 
 export class AttendeeDTO {
-
   @ApiProperty({ type: String })
   name: string;
 
   @ApiProperty({ type: String })
   documentNumber: string;
 
+  @IsString()
+  @IsIn(DOCUMENT_TYPES)
   @ApiProperty({ type: String })
-  documentType: number;
+  documentType: string;
 
   @ApiProperty({ type: String })
   phone: string;

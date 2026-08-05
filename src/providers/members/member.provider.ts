@@ -9,6 +9,7 @@ import {
   RelativeDto,
   MemberMinistryStudyDto,
   MemberWorkFrontDto,
+  ChangeMemberStatusDto,
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
@@ -24,6 +25,7 @@ export class MemberProvider {
     churchId?: string,
     workfrontId?: string,
     search?: string,
+    status?: string,
     page?: number,
     limit?: number,
   ): Promise<PaginatedResult<Members>> {
@@ -35,6 +37,9 @@ export class MemberProvider {
     }
     if (workfrontId) {
       filter.workfront = workfrontId;
+    }
+    if (status) {
+      filter.status = status;
     }
 
     if (search) {
@@ -79,10 +84,11 @@ export class MemberProvider {
   async linkUserByDocument(
     documentType: string,
     documentNumber: string,
+    churchId: string,
     memberId: string,
   ): Promise<void> {
     await this.userModel.updateOne(
-      { documentType, documentNumber },
+      { documentType, documentNumber, churchId },
       { memberId },
     );
   }
@@ -94,16 +100,104 @@ export class MemberProvider {
     });
   }
 
+  async changeStatus(
+    memberId: string,
+    statusData: ChangeMemberStatusDto,
+  ): Promise<GeneralResponse> {
+    const response: GeneralResponse = { isSuccessful: true };
+
+    try {
+      const existingMember = await this.memberModel.findOne({
+        _id: memberId,
+      });
+
+      if (!existingMember) {
+        response.isSuccessful = false;
+        response.message = 'Persona no encontrada.';
+        return response;
+      }
+
+      if (statusData.status === 'active') {
+        await this.memberModel.updateOne(
+          { _id: memberId },
+          {
+            $set: {
+              status: 'active',
+              inactiveDate: null,
+              inactiveReason: null,
+            },
+          },
+        );
+      } else {
+        const activeInOtherChurch = await this.memberModel.findOne({
+          _id: { $ne: memberId },
+          documentNumber: existingMember.documentNumber,
+          churchId: { $ne: existingMember.churchId },
+          status: 'active',
+        });
+
+        if (activeInOtherChurch) {
+          response.isSuccessful = false;
+          response.message =
+            'El miembro ya se encuentra activo en otra iglesia';
+          return response;
+        }
+
+        await this.memberModel.updateOne(
+          { _id: memberId },
+          {
+            $set: {
+              status: 'inactive',
+              inactiveDate: new Date(),
+              inactiveReason: statusData.inactiveReason || null,
+            },
+          },
+        );
+      }
+
+      response.data = await this.memberModel
+        .findOne({ _id: memberId })
+        .populate({ path: 'workfront', model: 'Workfront' });
+
+      return response;
+    } catch (error) {
+      console.log(error);
+      response.isSuccessful = false;
+      response.message = 'Error actualizando el estado del miembro.';
+      return response;
+    }
+  }
+
   async create(member: MemberGeneralInfoDto): Promise<GeneralResponse> {
     const response: GeneralResponse = { isSuccessful: true };
 
     try {
-      const existingUser = await this.memberModel.findOne({
+      const existingInChurch = await this.memberModel.findOne({
         documentNumber: member.documentNumber,
+        churchId: member.churchId,
       });
 
-      if (existingUser) {
+      if (existingInChurch) {
+        if (existingInChurch.status === 'inactive') {
+          response.isSuccessful = false;
+          response.message = 'El miembro se encuentra inactivo en esta iglesia';
+          response.data = existingInChurch;
+          return response;
+        }
+
         response.message = 'El número de cédula ya está registrado';
+        response.isSuccessful = false;
+        return response;
+      }
+
+      const activeInOtherChurch = await this.memberModel.findOne({
+        documentNumber: member.documentNumber,
+        churchId: { $ne: member.churchId },
+        status: 'active',
+      });
+
+      if (activeInOtherChurch) {
+        response.message = 'El miembro ya se encuentra activo en otra iglesia';
         response.isSuccessful = false;
         return response;
       }

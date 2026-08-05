@@ -6,8 +6,10 @@ import {
   IsOptional,
   IsNotEmpty,
   IsMongoId,
+  IsIn,
   ValidateNested,
 } from 'class-validator';
+import { DOCUMENT_TYPES } from '../../constants/document-types';
 
 export class CreateFamilyGroupDto {
   @IsMongoId()
@@ -156,6 +158,7 @@ export class RegisterFamilyGroupMemberDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsIn(DOCUMENT_TYPES)
   @ApiProperty({ example: 'CC' })
   documentType: string;
 

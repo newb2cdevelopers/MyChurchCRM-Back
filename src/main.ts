@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import * as bodyParser from 'body-parser';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { NormalizeEmptyStringsPipe } from './utilities/normalize-empty-strings.pipe';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -18,6 +19,7 @@ async function bootstrap() {
 
   // Global Validation Pipe - Validates DTOs automatically
   app.useGlobalPipes(
+    new NormalizeEmptyStringsPipe(), // NormalizeEmptyStringsPipe - Converts empty strings to undefined
     new ValidationPipe({
       transform: true, // Auto-transform payloads to DTO instances
       whitelist: true, // Strip properties not defined in DTO

@@ -30,6 +30,7 @@ import {
   RelativeDto,
   MemberMinistryStudyDto,
   MemberWorkFrontDto,
+  ChangeMemberStatusDto,
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
@@ -70,6 +71,7 @@ export class MemberController {
     @Query('search') search: string,
     @Query('page') page: number,
     @Query('limit') limit: number,
+    @Query('status') status: string,
     @Query('ignoreWorkfront') ignoreWorkfront: string,
   ): Promise<PaginatedResult<Members>> {
     let workfrontId = user.workfront;
@@ -89,6 +91,7 @@ export class MemberController {
       user.churchId,
       workfrontId,
       search,
+      status,
       page,
       limit,
     );
@@ -125,6 +128,32 @@ export class MemberController {
     if (!result) throw new NotFoundException('Member not found');
 
     return result;
+  }
+
+  @UseGuards(AuthGuard)
+  @Put(':id/status')
+  @ApiOperation({
+    summary: 'Change member status',
+    description:
+      'Activates or inactivates a member. A member cannot be active in two churches at the same time.',
+  })
+  @ApiOkResponse({
+    description: 'Member status updated successfully',
+    schema: {
+      example: {
+        isSuccessful: true,
+        data: { _id: '679d017daf1fff94edac0c1a', status: 'inactive' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Member not found' })
+  @ApiParam({ name: 'id', required: true, description: 'Member MongoDB ID' })
+  @ApiBody({ type: ChangeMemberStatusDto })
+  async changeStatus(
+    @Param('id') id: string,
+    @Body() statusData: ChangeMemberStatusDto,
+  ): Promise<GeneralResponse> {
+    return await this.memberBusiness.changeStatus(id, statusData);
   }
 
   @UseGuards(AuthGuard)
