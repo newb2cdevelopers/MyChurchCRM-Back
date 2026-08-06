@@ -27,6 +27,8 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
       'Grupos Familiares',
       'Gestionar Usuarios',
       'Estudiantes de Escuela Dominical',
+      'Gestión de Niveles',
+      'Gestión de Clases',
     ],
     scope: 'all',
     actions: Object.values(ACTION_NAMES).map((name) => ({
@@ -36,7 +38,11 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
   },
   {
     roleName: 'Coordinador Escuela Dominical',
-    functionalityNames: ['Estudiantes de Escuela Dominical'],
+    functionalityNames: [
+      'Estudiantes de Escuela Dominical',
+      'Gestión de Niveles',
+      'Gestión de Clases',
+    ],
     scope: 'all',
     actions: [
       { name: ACTION_NAMES.CREATE_LEVEL, enabled: true },
@@ -45,12 +51,15 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
       { name: ACTION_NAMES.CREATE_STUDENT, enabled: true },
       { name: ACTION_NAMES.EDIT_STUDENT, enabled: true },
       { name: ACTION_NAMES.DELETE_STUDENT, enabled: true },
+      { name: ACTION_NAMES.CREATE_CLASS, enabled: true },
+      { name: ACTION_NAMES.EDIT_CLASS, enabled: true },
+      { name: ACTION_NAMES.DELETE_CLASS, enabled: true },
       { name: ACTION_NAMES.REGISTER_ATTENDANCE, enabled: false },
     ],
   },
   {
     roleName: 'Maestro Escuela Dominical',
-    functionalityNames: ['Estudiantes de Escuela Dominical'],
+    functionalityNames: ['Gestión de Niveles'],
     scope: 'own',
     actions: [
       { name: ACTION_NAMES.CREATE_LEVEL, enabled: false },
@@ -59,6 +68,9 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
       { name: ACTION_NAMES.CREATE_STUDENT, enabled: false },
       { name: ACTION_NAMES.EDIT_STUDENT, enabled: false },
       { name: ACTION_NAMES.DELETE_STUDENT, enabled: false },
+      { name: ACTION_NAMES.CREATE_CLASS, enabled: false },
+      { name: ACTION_NAMES.EDIT_CLASS, enabled: false },
+      { name: ACTION_NAMES.DELETE_CLASS, enabled: false },
       { name: ACTION_NAMES.REGISTER_ATTENDANCE, enabled: true },
     ],
   },

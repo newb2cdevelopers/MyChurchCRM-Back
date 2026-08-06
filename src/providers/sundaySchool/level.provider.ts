@@ -77,6 +77,16 @@ export class LevelProvider {
     return this.levelModel.findById(id).populate('teachers');
   }
 
+  async getLevelsByIdsAndChurch(
+    levelIds: string[],
+    churchId: string,
+  ): Promise<LevelDocument[]> {
+    return this.levelModel.find({
+      _id: { $in: levelIds },
+      churchId,
+    });
+  }
+
   async findByNameAndChurch(
     name: string,
     churchId: string,

@@ -7,11 +7,14 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
@@ -19,6 +22,8 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { PermissionGuard } from 'src/modules/auth/permission.guard';
@@ -29,6 +34,7 @@ import { JWTPayload } from 'src/schemas/auth/JWTPayload';
 import { LevelBusiness } from 'src/business/sundaySchool/level.bl';
 import { StudentBusiness } from 'src/business/sundaySchool/student.bl';
 import { AttendanceBusiness } from 'src/business/sundaySchool/attendance.bl';
+import { SundaySchoolClassBusiness } from 'src/business/sundaySchool/class.bl';
 
 import { CreateLevelDto, UpdateLevelDto } from 'src/schemas/level/level.DTO';
 import {
@@ -36,8 +42,18 @@ import {
   UpdateStudentDto,
 } from 'src/schemas/student/student.DTO';
 import { RegisterAttendanceDto } from 'src/schemas/sundaySchool/attendance.DTO';
+import {
+  CreateClassDto,
+  UpdateClassDto,
+} from 'src/schemas/sundaySchool/class.DTO';
 
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
+
+interface ClassUploadFile {
+  buffer: Buffer;
+  originalname: string;
+  mimetype: string;
+}
 
 @ApiTags('Sunday School')
 @Controller('sundaySchool')
@@ -46,6 +62,7 @@ export class SundaySchoolController {
     private readonly levelBusiness: LevelBusiness,
     private readonly studentBusiness: StudentBusiness,
     private readonly attendanceBusiness: AttendanceBusiness,
+    private readonly classBusiness: SundaySchoolClassBusiness,
   ) {}
 
   // ------------------- LEVELS -------------------
@@ -99,7 +116,7 @@ export class SundaySchoolController {
   }
 
   @UseGuards(AuthGuard, PermissionGuard)
-  @Permission('sunday-school-students', 'create_level')
+  @Permission('sunday-school-levels', 'create_level')
   @Post('level')
   @ApiOperation({
     summary: 'Create a Sunday School level',
@@ -130,7 +147,7 @@ export class SundaySchoolController {
   }
 
   @UseGuards(AuthGuard, PermissionGuard)
-  @Permission('sunday-school-students', 'edit_level')
+  @Permission('sunday-school-levels', 'edit_level')
   @Put('level/:id')
   @ApiOperation({ summary: 'Update a Sunday School level' })
   @ApiOkResponse({
@@ -158,7 +175,7 @@ export class SundaySchoolController {
   }
 
   @UseGuards(AuthGuard, PermissionGuard)
-  @Permission('sunday-school-students', 'delete_level')
+  @Permission('sunday-school-levels', 'delete_level')
   @Delete('level/:id')
   @ApiOperation({ summary: 'Delete a Sunday School level' })
   @ApiOkResponse({
@@ -371,7 +388,7 @@ export class SundaySchoolController {
   }
 
   @UseGuards(AuthGuard, PermissionGuard)
-  @Permission('sunday-school-students', 'register_attendance')
+  @Permission('sunday-school-levels', 'register_attendance')
   @Post('registerAttendance')
   @ApiOperation({
     summary: 'Register or update attendance',
@@ -407,5 +424,233 @@ export class SundaySchoolController {
     @Auth() user?: JWTPayload,
   ): Promise<GeneralResponse> {
     return this.attendanceBusiness.register(attendance, user?.userId);
+  }
+
+  // ------------------- CLASSES -------------------
+
+  @UseGuards(AuthGuard)
+  @Get('class')
+  @ApiOperation({
+    summary: 'Get classes of the current user church',
+    description:
+      'Returns a paginated list of Sunday School classes of the church resolved from the JWT, optionally filtered by level.',
+  })
+  @ApiOkResponse({
+    description: 'Paginated list of classes',
+    schema: {
+      example: {
+        data: [
+          {
+            _id: '679d017daf1fff94edac0c1a',
+            lessonName: 'Lección 5',
+            pdfUrl: 'https://res.cloudinary.com/.../class.pdf',
+            levelIds: [{ _id: '123', name: 'Párvulos' }],
+            date: '2026-08-09',
+            churchId: '679d017daf1fff94edac0c1a',
+          },
+        ],
+        metadata: { currentPage: 1, totalPages: 1, totalRecords: 5 },
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'levelId',
+    required: false,
+    description: 'Filter by level ID',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page (max 100)',
+  })
+  async getAllClasses(
+    @Query('levelId') levelId?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Auth() user?: JWTPayload,
+  ) {
+    return this.classBusiness.getAll(user?.churchId, levelId, page, limit);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('class/prefill')
+  @ApiOperation({
+    summary: 'Get the weekly window for an attendance date',
+    description:
+      'Returns the Monday-Sunday window that contains the given date, used to prefill the attendance date of a class.',
+  })
+  @ApiOkResponse({
+    description: 'Weekly window',
+    schema: {
+      example: {
+        startOfWeek: '2026-08-03T00:00:00.000Z',
+        endOfWeek: '2026-08-09T23:59:59.999Z',
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Reference date (ISO). Defaults to today',
+  })
+  getWeeklyWindow(@Query('date') date?: string) {
+    return this.classBusiness.getWeeklyWindow(date);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('class/:id')
+  @ApiOperation({ summary: 'Get class by ID' })
+  @ApiOkResponse({ description: 'Class details' })
+  @ApiBadRequestResponse({ description: 'Invalid class ID' })
+  @ApiParam({ name: 'id', required: true, description: 'Class ID' })
+  async getClassById(@Param('id') id: string) {
+    return this.classBusiness.getById(id);
+  }
+
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('sunday-school-classes', 'create_class')
+  @Post('class')
+  @ApiOperation({
+    summary: 'Create a Sunday School class',
+    description:
+      'Creates a new class with its lesson PDF. The church is resolved from the JWT token.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        lessonName: { type: 'string', example: 'Lección 5' },
+        date: { type: 'string', example: '2026-08-09' },
+        levelIds: {
+          type: 'string',
+          example: '["679d017daf1fff94edac0c1a","679d017daf1fff94edac0c1b"]',
+          description: 'JSON array of level IDs',
+        },
+        pdf: {
+          type: 'string',
+          format: 'binary',
+          description: 'Lesson PDF file',
+        },
+      },
+      required: ['lessonName', 'date', 'levelIds', 'pdf'],
+    },
+  })
+  @ApiCreatedResponse({
+    description: 'Class created successfully',
+    schema: {
+      example: {
+        isSuccessful: true,
+        data: {
+          _id: '679d017daf1fff94edac0c1a',
+          lessonName: 'Lección 5',
+          date: '2026-08-09',
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid levels, date or PDF',
+    schema: {
+      example: {
+        isSuccessful: false,
+        message: 'Algunos niveles no pertenecen a esta iglesia',
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('pdf', { storage: memoryStorage() }))
+  async createClass(
+    @Body() body: CreateClassDto,
+    @UploadedFile() pdf?: ClassUploadFile,
+    @Auth() user?: JWTPayload,
+  ): Promise<GeneralResponse> {
+    return this.classBusiness.create(body, user?.churchId, pdf);
+  }
+
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('sunday-school-classes', 'edit_class')
+  @Put('class/:id')
+  @ApiOperation({
+    summary: 'Update a Sunday School class',
+    description:
+      'Updates the class fields. A new PDF can be uploaded optionally.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        lessonName: { type: 'string', example: 'Lección 5' },
+        date: { type: 'string', example: '2026-08-09' },
+        levelIds: {
+          type: 'string',
+          example: '["679d017daf1fff94edac0c1a","679d017daf1fff94edac0c1b"]',
+          description: 'JSON array of level IDs',
+        },
+        pdf: {
+          type: 'string',
+          format: 'binary',
+          description: 'Lesson PDF file (optional)',
+        },
+      },
+    },
+  })
+  @ApiOkResponse({
+    description: 'Class updated successfully',
+    schema: {
+      example: {
+        isSuccessful: true,
+        data: {
+          _id: '679d017daf1fff94edac0c1a',
+          lessonName: 'Lección 6',
+          date: '2026-08-16',
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid class, levels, date or PDF',
+    schema: {
+      example: { isSuccessful: false, message: 'La clase no es válida' },
+    },
+  })
+  @ApiParam({ name: 'id', required: true, description: 'Class ID' })
+  @UseInterceptors(FileInterceptor('pdf', { storage: memoryStorage() }))
+  async updateClass(
+    @Param('id') id: string,
+    @Body() body: UpdateClassDto,
+    @UploadedFile() pdf?: ClassUploadFile,
+    @Auth() user?: JWTPayload,
+  ): Promise<GeneralResponse> {
+    return this.classBusiness.update(id, body, user?.churchId, pdf);
+  }
+
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('sunday-school-classes', 'delete_class')
+  @Delete('class/:id')
+  @ApiOperation({ summary: 'Delete a Sunday School class' })
+  @ApiOkResponse({
+    description: 'Class deleted successfully',
+    schema: {
+      example: {
+        isSuccessful: true,
+        message: 'Clase eliminada correctamente',
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid class ID',
+    schema: {
+      example: { isSuccessful: false, message: 'La clase no es válida' },
+    },
+  })
+  @ApiParam({ name: 'id', required: true, description: 'Class ID' })
+  async deleteClass(@Param('id') id: string): Promise<GeneralResponse> {
+    return this.classBusiness.remove(id);
   }
 }

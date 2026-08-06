@@ -8,5 +8,9 @@ export const MODULE_FUNCTIONALITY_ORDER: Record<string, string[]> = {
     '/confirmarReserva',
     '/cargaMasiva',
   ],
-  'sunday-school': ['/sunday-school-students'],
+  'sunday-school': [
+    '/sunday-school-students',
+    '/sunday-school-levels',
+    '/sunday-school-classes',
+  ],
 };
