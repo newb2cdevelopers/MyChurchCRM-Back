@@ -26,12 +26,25 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
       'Asignación Frentes',
       'Grupos Familiares',
       'Gestionar Usuarios',
+      'Estudiantes de Escuela Dominical',
     ],
     scope: 'all',
     actions: Object.values(ACTION_NAMES).map((name) => ({
       name,
       enabled: true,
     })),
+  },
+  {
+    roleName: 'Coordinador Escuela Dominical',
+    functionalityNames: ['Estudiantes de Escuela Dominical'],
+    scope: 'all',
+    actions: [],
+  },
+  {
+    roleName: 'Maestro Escuela Dominical',
+    functionalityNames: ['Estudiantes de Escuela Dominical'],
+    scope: 'all',
+    actions: [],
   },
   {
     roleName: 'Coordinador Grupos Familiares',
