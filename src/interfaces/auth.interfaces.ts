@@ -23,6 +23,7 @@ export interface FunctionalityWithModule {
   name?: string;
   icon?: string;
   module: {
+    _id?: string;
     name: string;
     active: boolean;
     icon?: string;
@@ -54,6 +55,7 @@ export interface PopulatedPermission {
     route: string;
     icon: string;
     module: {
+      _id?: string;
       name: string;
       active: boolean;
       icon?: string;

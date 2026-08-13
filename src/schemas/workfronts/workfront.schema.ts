@@ -3,14 +3,20 @@ import * as mongoose from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Workfront {
-
- _id: number;
+  _id: number;
 
   @Prop()
   name: string;
 
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Church' })
   churchId: string;
+
+  @Prop({
+    required: false,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Module',
+  })
+  moduleId: string;
 
   @Prop()
   status: string;

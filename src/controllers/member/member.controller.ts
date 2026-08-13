@@ -73,10 +73,13 @@ export class MemberController {
     @Query('limit') limit: number,
     @Query('status') status: string,
     @Query('ignoreWorkfront') ignoreWorkfront: string,
+    @Query('workfrontId') requestedWorkfrontId?: string,
   ): Promise<PaginatedResult<Members>> {
-    let workfrontId = user.workfront;
+    let workfrontId = requestedWorkfrontId || user.workfront;
 
-    if (ignoreWorkfront === 'true') {
+    if (requestedWorkfrontId) {
+      workfrontId = requestedWorkfrontId;
+    } else if (ignoreWorkfront === 'true') {
       workfrontId = null;
     } else if (!workfrontId) {
       return {

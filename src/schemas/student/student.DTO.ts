@@ -60,6 +60,11 @@ export class CreateStudentDto {
   @ApiPropertyOptional({ example: 'Abuela Luisa' })
   guardianName?: string;
 
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ example: 'Alérgico a los frutos secos' })
+  observations?: string;
+
   @IsMongoId()
   @IsNotEmpty()
   @ApiProperty({ example: '679d017daf1fff94edac0c1a' })
@@ -124,6 +129,11 @@ export class UpdateStudentDto {
   @IsString()
   @ApiPropertyOptional({ example: 'Abuela Luisa' })
   guardianName?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ example: 'Alérgico a los frutos secos' })
+  observations?: string;
 
   @IsOptional()
   @IsMongoId()

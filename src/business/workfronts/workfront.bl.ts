@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Workfront } from 'src/schemas/workfronts/workfront.schema'
-import { WorkfrontProvider } from 'src/providers/workfront/workfront.provider'
+import { Workfront } from 'src/schemas/workfronts/workfront.schema';
+import { WorkfrontProvider } from 'src/providers/workfront/workfront.provider';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 
 @Injectable()
@@ -12,7 +12,19 @@ export class WorkfrontBusiness {
   }
 
   async getAllWorkfrontsByChurch(churchId: string): Promise<Workfront[]> {
-    return this.provider.getAllWorkfrontsByChurch(churchId) as unknown as Promise<Workfront[]>;
+    return this.provider.getAllWorkfrontsByChurch(
+      churchId,
+    ) as unknown as Promise<Workfront[]>;
+  }
+
+  async getAllWorkfrontsByChurchAndModule(
+    churchId: string,
+    moduleId: string,
+  ): Promise<Workfront[]> {
+    return this.provider.getAllWorkfrontsByChurchAndModule(
+      churchId,
+      moduleId,
+    ) as unknown as Promise<Workfront[]>;
   }
 
   async create(workfront: Workfront): Promise<Workfront> {
@@ -23,7 +35,10 @@ export class WorkfrontBusiness {
     return this.provider.getWorkFrontAssignmentData(churchId);
   }
 
-  async saveAssignment(workfrontId: string, users: string[]) : Promise<GeneralResponse> {
+  async saveAssignment(
+    workfrontId: string,
+    users: string[],
+  ): Promise<GeneralResponse> {
     return this.provider.saveAssignment(workfrontId, users);
   }
 }

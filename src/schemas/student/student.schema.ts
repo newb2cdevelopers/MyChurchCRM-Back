@@ -35,6 +35,9 @@ export class Students {
   @Prop()
   guardianName: string;
 
+  @Prop()
+  observations: string;
+
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Level' })
   levelId: string;
 

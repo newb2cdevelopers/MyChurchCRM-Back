@@ -6,6 +6,8 @@ import {
   Param,
   UseGuards,
   ForbiddenException,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -44,6 +46,7 @@ export class WorkfrontController {
           _id: '679d017daf1fff94edac0c1a',
           name: 'Alabanza',
           churchId: 'abc123',
+          moduleId: 'asdf123',
         },
       ],
     },
@@ -65,6 +68,7 @@ export class WorkfrontController {
           _id: '679d017daf1fff94edac0c1a',
           name: 'Alabanza',
           churchId: 'abc123',
+          moduleId: 'defg123',
         },
       ],
     },
@@ -78,6 +82,44 @@ export class WorkfrontController {
     @Param('churchId') churchId: string,
   ): Promise<Workfront[]> {
     return await this.workfrontBusiness.getAllWorkfrontsByChurch(churchId);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('by-module')
+  @ApiOperation({
+    summary: 'Get workfronts for the current module in the logged church',
+    description:
+      'Returns the valid workfronts for the active module in the logged user church. Used by the frontend to resolve the workfrontId tied to the module context, not the user.',
+  })
+  @ApiOkResponse({
+    description: 'Workfronts for the current module',
+    schema: {
+      example: [
+        {
+          _id: '679d017daf1fff94edac0c1a',
+          name: 'Escuela Dominical',
+          churchId: 'abc123',
+          moduleId: 'school',
+        },
+      ],
+    },
+  })
+  async getWorkfrontsByCurrentModule(
+    @Auth() user: JWTPayload,
+    @Query('moduleId') moduleId: string,
+  ): Promise<Workfront[]> {
+    if (!user.churchId) {
+      throw new ForbiddenException('No tienes acceso a ninguna iglesia');
+    }
+
+    if (!moduleId) {
+      throw new BadRequestException('El moduleId es requerido');
+    }
+
+    return await this.workfrontBusiness.getAllWorkfrontsByChurchAndModule(
+      user.churchId,
+      moduleId,
+    );
   }
 
   @UseGuards(AuthGuard)
@@ -126,6 +168,7 @@ export class WorkfrontController {
         _id: '679d017daf1fff94edac0c1a',
         name: 'Alabanza',
         churchId: 'abc123',
+        moduleId: 'defg123',
       },
     },
   })

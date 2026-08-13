@@ -419,6 +419,7 @@ export class AuthBusiness {
         route: funcDoc.route,
         icon: funcDoc.icon,
         module: {
+          _id: funcDoc.module._id,
           name: funcDoc.module.name,
           active: funcDoc.module.active,
           icon: funcDoc.module.icon,
