@@ -74,6 +74,26 @@ export class MemberProvider {
       .lean();
   }
 
+  async findByDocuments(
+    documents: { documentType: string; documentNumber: string }[],
+  ): Promise<Pick<Members, 'documentType' | 'documentNumber'>[]> {
+    const orConditions = documents
+      .filter((d) => d.documentType && d.documentNumber)
+      .map((d) => ({
+        documentType: d.documentType,
+        documentNumber: d.documentNumber,
+      }));
+
+    if (orConditions.length === 0) {
+      return [];
+    }
+
+    return await this.memberModel
+      .find({ $or: orConditions })
+      .select('documentType documentNumber')
+      .lean();
+  }
+
   async findByDocument(
     documentType: string,
     documentNumber: string,

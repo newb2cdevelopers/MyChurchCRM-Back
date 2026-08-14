@@ -10,8 +10,9 @@ import { SundaySchoolClass } from 'src/schemas/sundaySchool/class.schema';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
 import {
-  deleteCloudinaryRawByUrl,
-  uploadRawBufferToCloudinary,
+  deleteCloudinaryImageByUrl,
+  getSignedPdfUrl,
+  uploadImageBufferToCloudinary,
 } from 'src/utilities/cloudinary';
 
 export interface ClassUploadFile {
@@ -51,11 +52,22 @@ export class SundaySchoolClassBusiness {
       return EMPTY_RESULT;
     }
 
-    return this.provider.getAllByChurch(churchId, levelId, page, limit);
+    const result = await this.provider.getAllByChurch(
+      churchId,
+      levelId,
+      page,
+      limit,
+    );
+
+    return {
+      data: result.data.map((item) => this.withSignedPdfUrl(item)),
+      metadata: result.metadata,
+    };
   }
 
   async getById(id: string): Promise<SundaySchoolClass | null> {
-    return this.provider.getById(id);
+    const item = await this.provider.getById(id);
+    return item ? this.withSignedPdfUrl(item) : null;
   }
 
   async create(
@@ -109,19 +121,21 @@ export class SundaySchoolClassBusiness {
     }
 
     try {
-      const pdfUrl = await uploadRawBufferToCloudinary(
+      const pdfUrl = await uploadImageBufferToCloudinary(
         file.buffer,
         SUNDAY_SCHOOL_CLASSES_FOLDER,
         file.originalname,
       );
 
-      response.data = await this.provider.create({
-        lessonName: dto.lessonName,
-        pdfUrl,
-        levelIds,
-        date,
-        churchId,
-      });
+      response.data = this.withSignedPdfUrl(
+        await this.provider.create({
+          lessonName: dto.lessonName,
+          pdfUrl,
+          levelIds,
+          date,
+          churchId,
+        }),
+      );
       response.isSuccessful = true;
 
       return response;
@@ -206,7 +220,7 @@ export class SundaySchoolClassBusiness {
       }
 
       try {
-        data.pdfUrl = await uploadRawBufferToCloudinary(
+        data.pdfUrl = await uploadImageBufferToCloudinary(
           file.buffer,
           SUNDAY_SCHOOL_CLASSES_FOLDER,
           file.originalname,
@@ -224,7 +238,9 @@ export class SundaySchoolClassBusiness {
     }
 
     try {
-      response.data = await this.provider.update(id, data);
+      response.data = this.withSignedPdfUrl(
+        await this.provider.update(id, data),
+      );
 
       if (
         data.pdfUrl &&
@@ -232,7 +248,7 @@ export class SundaySchoolClassBusiness {
         existingClass.pdfUrl !== data.pdfUrl
       ) {
         try {
-          await deleteCloudinaryRawByUrl(existingClass.pdfUrl);
+          await deleteCloudinaryImageByUrl(existingClass.pdfUrl);
         } catch (error) {
           this.logger.warn(
             `[update] Failed to delete previous class PDF: ${existingClass.pdfUrl}`,
@@ -270,7 +286,7 @@ export class SundaySchoolClassBusiness {
 
     if (existingClass.pdfUrl) {
       try {
-        await deleteCloudinaryRawByUrl(existingClass.pdfUrl);
+        await deleteCloudinaryImageByUrl(existingClass.pdfUrl);
       } catch (error) {
         this.logger.warn(
           `[remove] Failed to delete class PDF from Cloudinary: ${existingClass.pdfUrl}`,
@@ -282,6 +298,24 @@ export class SundaySchoolClassBusiness {
     response.message = 'Clase eliminada correctamente';
 
     return response;
+  }
+
+  /**
+   * Replaces the stored PDF URL with a signed, expiring delivery URL so the
+   * browser can render the PDF even when the account restricts PDF delivery.
+   * Converts Mongoose documents to plain objects first so the response does
+   * not leak internal document state ($__, _doc, etc.).
+   */
+  private withSignedPdfUrl<T extends { pdfUrl?: string }>(item: T): T {
+    if (!item.pdfUrl) {
+      return item;
+    }
+
+    const doc = item as T & { toObject?: () => T };
+    const plain =
+      typeof doc.toObject === 'function' ? doc.toObject() : { ...item };
+
+    return { ...plain, pdfUrl: getSignedPdfUrl(item.pdfUrl) };
   }
 
   /**

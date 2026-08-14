@@ -32,16 +32,31 @@ export class UserBusiness {
 
     const result = await this.userProvider.getAllUsers(filter, page, limit);
 
-    const emails = result.data.map((u) => u.email).filter(Boolean);
-    let memberEmails = new Set<string>();
-    if (emails.length > 0) {
-      const members = await this.memberProvider.findByEmails(emails);
-      memberEmails = new Set(members.map((m) => m.email));
+    // A user is considered a member when a member exists with the same
+    // document type and number. The email is not reliable for this match
+    // because a user may register with one email and be added as a member
+    // with another, while the document number is unique and shared.
+    const documents = result.data
+      .map((u) => ({
+        documentType: u.documentType,
+        documentNumber: u.documentNumber,
+      }))
+      .filter((d) => d.documentType && d.documentNumber);
+
+    let memberDocuments = new Set<string>();
+    if (documents.length > 0) {
+      const members = await this.memberProvider.findByDocuments(documents);
+      memberDocuments = new Set(
+        members.map((m) => `${m.documentType}|${m.documentNumber}`),
+      );
     }
 
     const data = result.data.map((u) => ({
       ...u,
-      isMember: memberEmails.has(u.email),
+      isMember:
+        u.documentType && u.documentNumber
+          ? memberDocuments.has(`${u.documentType}|${u.documentNumber}`)
+          : false,
     }));
 
     return { data, metadata: result.metadata };
