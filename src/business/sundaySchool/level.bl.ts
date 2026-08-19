@@ -95,6 +95,19 @@ export class LevelBusiness {
       return response;
     }
 
+    if (level.teachers?.length) {
+      const conflictMessage = await this.findTeacherConflict(level.teachers);
+
+      if (conflictMessage) {
+        this.logger.warn(
+          `[create] Teacher already assigned to another level: ${conflictMessage}`,
+        );
+        response.message = conflictMessage;
+
+        return response;
+      }
+    }
+
     response.data = await this.provider.create({ ...level, churchId });
     response.isSuccessful = true;
 
@@ -135,6 +148,22 @@ export class LevelBusiness {
       }
     }
 
+    if (level.teachers?.length) {
+      const conflictMessage = await this.findTeacherConflict(
+        level.teachers,
+        id,
+      );
+
+      if (conflictMessage) {
+        this.logger.warn(
+          `[update] Teacher already assigned to another level: ${conflictMessage}`,
+        );
+        response.message = conflictMessage;
+
+        return response;
+      }
+    }
+
     response.data = await this.provider.update(id, level);
     response.isSuccessful = true;
 
@@ -166,5 +195,31 @@ export class LevelBusiness {
     response.message = 'Nivel eliminado correctamente';
 
     return response;
+  }
+
+  /**
+   * Checks whether any of the given teacher IDs is already assigned to a
+   * level other than the one being edited (excludeLevelId). Returns a
+   * user-facing message describing the conflict, or null when all teachers
+   * are available.
+   */
+  private async findTeacherConflict(
+    teacherIds: string[],
+    excludeLevelId?: string,
+  ): Promise<string | null> {
+    const conflictingLevels = await this.provider.getLevelsByTeachers(
+      teacherIds,
+      excludeLevelId,
+    );
+
+    if (conflictingLevels.length === 0) {
+      return null;
+    }
+
+    const levelNames = conflictingLevels
+      .map((level) => `'${level.name}'`)
+      .join(', ');
+
+    return `El maestro seleccionado ya está asignado al nivel ${levelNames}. Debe quitarlo de ese nivel antes de asignarlo aquí.`;
   }
 }

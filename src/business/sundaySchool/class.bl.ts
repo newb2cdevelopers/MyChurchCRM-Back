@@ -28,6 +28,8 @@ export interface WeeklyWindow {
 
 const SUNDAY_SCHOOL_CLASSES_FOLDER = 'mychurchcrm/sundaySchool/classes';
 
+const MAESTRO_ROLE = 'Maestro Escuela Dominical';
+
 const EMPTY_RESULT: PaginatedResult<SundaySchoolClass> = {
   data: [],
   metadata: { currentPage: 1, totalPages: 0, totalRecords: 0 },
@@ -47,14 +49,41 @@ export class SundaySchoolClassBusiness {
     levelId?: string,
     page?: number,
     limit?: number,
+    userId?: string,
   ): Promise<PaginatedResult<SundaySchoolClass>> {
     if (!churchId) {
       return EMPTY_RESULT;
     }
 
+    let levelIds: string[] | undefined;
+
+    if (levelId) {
+      levelIds = [levelId];
+    }
+
+    if (userId) {
+      const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
+        userId,
+      );
+
+      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+        const teacherLevelIds = await this.levelProvider.getLevelIdsByTeacher(
+          memberId,
+        );
+
+        if (levelId && !teacherLevelIds.includes(levelId)) {
+          return EMPTY_RESULT;
+        }
+
+        if (!levelId) {
+          levelIds = teacherLevelIds;
+        }
+      }
+    }
+
     const result = await this.provider.getAllByChurch(
       churchId,
-      levelId,
+      levelIds,
       page,
       limit,
     );
@@ -65,9 +94,39 @@ export class SundaySchoolClassBusiness {
     };
   }
 
-  async getById(id: string): Promise<SundaySchoolClass | null> {
+  async getById(
+    id: string,
+    userId?: string,
+  ): Promise<SundaySchoolClass | null> {
     const item = await this.provider.getById(id);
-    return item ? this.withSignedPdfUrl(item) : null;
+
+    if (!item) {
+      return null;
+    }
+
+    if (userId) {
+      const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
+        userId,
+      );
+
+      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+        const teacherLevelIds = await this.levelProvider.getLevelIdsByTeacher(
+          memberId,
+        );
+
+        const classLevelIds = (item.levelIds || []).map((levelId) =>
+          levelId.toString(),
+        );
+
+        if (
+          !classLevelIds.some((levelId) => teacherLevelIds.includes(levelId))
+        ) {
+          return null;
+        }
+      }
+    }
+
+    return this.withSignedPdfUrl(item);
   }
 
   async create(
@@ -116,6 +175,19 @@ export class SundaySchoolClassBusiness {
 
     if (!date) {
       response.message = 'La fecha de la clase no es válida';
+
+      return response;
+    }
+
+    const duplicateClass = await this.provider.findByDateAndLevels(
+      churchId,
+      date,
+      levelIds,
+    );
+
+    if (duplicateClass) {
+      response.message =
+        'Ya existe una clase para esta fecha con uno de los niveles seleccionados';
 
       return response;
     }
@@ -319,9 +391,11 @@ export class SundaySchoolClassBusiness {
   }
 
   /**
-   * Returns the Monday-Sunday window that contains the given date.
-   * Used to prefill the attendance date: the attendance record of a
-   * Sunday School class falls within the same week as the class.
+   * Returns the Sunday-Saturday window that contains the given date.
+   * The Sunday School week starts on Sunday (class day) and ends on Saturday.
+   * Dates arrive as YYYY-MM-DD strings (parsed as UTC midnight), so the
+   * window is computed with UTC methods to avoid depending on the server
+   * timezone.
    */
   getWeeklyWindow(date?: string): WeeklyWindow {
     const referenceDate = date ? new Date(date) : new Date();
@@ -330,18 +404,43 @@ export class SundaySchoolClassBusiness {
       throw new BadRequestException('La fecha no es válida');
     }
 
-    const dayOfWeek = referenceDate.getDay(); // 0 = Sunday
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const dayOfWeek = referenceDate.getUTCDay(); // 0 = Sunday
+    const diffToSunday = -dayOfWeek;
 
     const startOfWeek = new Date(referenceDate);
-    startOfWeek.setDate(referenceDate.getDate() + diffToMonday);
-    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setUTCDate(referenceDate.getUTCDate() + diffToSunday);
+    startOfWeek.setUTCHours(0, 0, 0, 0);
 
     const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59, 999);
+    endOfWeek.setUTCDate(startOfWeek.getUTCDate() + 6);
+    endOfWeek.setUTCHours(23, 59, 59, 999);
 
     return { startOfWeek, endOfWeek };
+  }
+
+  /**
+   * Returns the class assigned for the week that contains the given date,
+   * optionally filtered by level. Used to prefill the attendance form and to
+   * validate that a class exists before registering attendance.
+   */
+  async getForAttendanceDate(
+    date: string,
+    churchId?: string,
+    levelId?: string,
+  ): Promise<SundaySchoolClass | null> {
+    if (!churchId) {
+      return null;
+    }
+
+    const { startOfWeek, endOfWeek } = this.getWeeklyWindow(date);
+    const item = await this.provider.findForWeek(
+      churchId,
+      startOfWeek,
+      endOfWeek,
+      levelId,
+    );
+
+    return item ? this.withSignedPdfUrl(item) : null;
   }
 
   private parseLevelIds(value: string): string[] {

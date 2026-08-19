@@ -59,7 +59,11 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
   },
   {
     roleName: 'Maestro Escuela Dominical',
-    functionalityNames: ['Gestión de Niveles'],
+    functionalityNames: [
+      'Estudiantes de Escuela Dominical',
+      'Gestión de Niveles',
+      'Gestión de Clases',
+    ],
     scope: 'own',
     actions: [
       { name: ACTION_NAMES.CREATE_LEVEL, enabled: false },

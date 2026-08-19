@@ -87,6 +87,26 @@ export class LevelProvider {
     });
   }
 
+  /**
+   * Returns levels whose teachers array contains any of the given teacher
+   * IDs. Optionally excludes a level (e.g. the level being edited) so a
+   * teacher assigned only to that level is not reported as a conflict.
+   */
+  async getLevelsByTeachers(
+    teacherIds: string[],
+    excludeLevelId?: string,
+  ): Promise<LevelDocument[]> {
+    const filter: FilterQuery<LevelDocument> = {
+      teachers: { $in: teacherIds },
+    };
+
+    if (excludeLevelId) {
+      filter._id = { $ne: excludeLevelId };
+    }
+
+    return this.levelModel.find(filter).select('name teachers');
+  }
+
   async findByNameAndChurch(
     name: string,
     churchId: string,

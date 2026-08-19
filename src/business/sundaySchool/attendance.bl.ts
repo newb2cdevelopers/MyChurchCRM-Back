@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SundaySchoolAttendanceProvider } from 'src/providers/sundaySchool/attendance.provider';
 import { LevelProvider } from 'src/providers/sundaySchool/level.provider';
 import { StudentProvider } from 'src/providers/sundaySchool/student.provider';
+import { SundaySchoolClassBusiness } from 'src/business/sundaySchool/class.bl';
 import { RegisterAttendanceDto } from 'src/schemas/sundaySchool/attendance.DTO';
 import { SundaySchoolAttendance } from 'src/schemas/sundaySchool/attendance.schema';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
@@ -16,6 +17,7 @@ export class AttendanceBusiness {
     private readonly provider: SundaySchoolAttendanceProvider,
     private readonly levelProvider: LevelProvider,
     private readonly studentProvider: StudentProvider,
+    private readonly classBusiness: SundaySchoolClassBusiness,
   ) {}
 
   async getByLevel(
@@ -44,6 +46,7 @@ export class AttendanceBusiness {
   async register(
     attendance: RegisterAttendanceDto,
     userId?: string,
+    churchId?: string,
   ): Promise<GeneralResponse> {
     const response: GeneralResponse = { isSuccessful: false };
 
@@ -57,10 +60,11 @@ export class AttendanceBusiness {
           memberId,
         );
 
-        if (
-          attendance.teacherId !== memberId ||
-          !teacherLevelIds.includes(attendance.levelId)
-        ) {
+        // The logged-in teacher can only register attendance for their own
+        // levels. The selected teacherId identifies who gave the class and
+        // may differ from the logged-in user, so it is validated against the
+        // level teachers below instead.
+        if (!teacherLevelIds.includes(attendance.levelId)) {
           response.message =
             'Solo puedes registrar la asistencia de tus niveles asignados';
 
@@ -77,9 +81,17 @@ export class AttendanceBusiness {
       return response;
     }
 
-    const teacherIds = (level.teachers || []).map((teacher) =>
-      teacher.toString(),
-    );
+    // level.teachers comes populated (full member documents), so each entry
+    // is a Mongoose document and its ID lives in `_id`. Falling back to
+    // toString() covers raw ObjectIds when the array is not populated.
+    // Cast to { _id?: unknown } because the schema types teachers as
+    // string[] even though getById populates them.
+    const teacherIds = (level.teachers || []).map((teacher) => {
+      const populated = teacher as unknown as { _id?: { toString(): string } };
+      return populated._id
+        ? populated._id.toString()
+        : (teacher as unknown as { toString(): string }).toString();
+    });
 
     if (!teacherIds.includes(attendance.teacherId)) {
       response.message =
@@ -87,6 +99,23 @@ export class AttendanceBusiness {
 
       return response;
     }
+
+    const weekClass = await this.classBusiness.getForAttendanceDate(
+      attendance.date,
+      churchId,
+      attendance.levelId,
+    );
+
+    if (!weekClass) {
+      response.message =
+        'No se ha subido la clase para esta semana. Comuníquese con el coordinador.';
+
+      return response;
+    }
+
+    // The official lesson name comes from the class uploaded for the week,
+    // regardless of what the teacher may send in the payload.
+    attendance.lessonName = weekClass.lessonName;
 
     if (attendance.studentsAttendance?.length) {
       const levelStudents = await this.studentProvider.getByLevel(

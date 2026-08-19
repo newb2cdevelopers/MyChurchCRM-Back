@@ -423,7 +423,11 @@ export class SundaySchoolController {
     @Body() attendance: RegisterAttendanceDto,
     @Auth() user?: JWTPayload,
   ): Promise<GeneralResponse> {
-    return this.attendanceBusiness.register(attendance, user?.userId);
+    return this.attendanceBusiness.register(
+      attendance,
+      user?.userId,
+      user?.churchId,
+    );
   }
 
   // ------------------- CLASSES -------------------
@@ -474,32 +478,55 @@ export class SundaySchoolController {
     @Query('limit') limit?: number,
     @Auth() user?: JWTPayload,
   ) {
-    return this.classBusiness.getAll(user?.churchId, levelId, page, limit);
+    return this.classBusiness.getAll(
+      user?.churchId,
+      levelId,
+      page,
+      limit,
+      user?.userId,
+    );
   }
 
   @UseGuards(AuthGuard)
-  @Get('class/prefill')
+  @Get('class/forWeek')
   @ApiOperation({
-    summary: 'Get the weekly window for an attendance date',
+    summary: 'Get the class assigned for the attendance week',
     description:
-      'Returns the Monday-Sunday window that contains the given date, used to prefill the attendance date of a class.',
+      'Returns the Sunday School class whose week (Sunday-Saturday) contains the given date, optionally filtered by level. Used to prefill the attendance form.',
   })
   @ApiOkResponse({
-    description: 'Weekly window',
+    description: 'Class of the week or null',
     schema: {
       example: {
-        startOfWeek: '2026-08-03T00:00:00.000Z',
-        endOfWeek: '2026-08-09T23:59:59.999Z',
+        _id: '679d017daf1fff94edac0c1a',
+        lessonName: 'Lección 5',
+        pdfUrl: 'https://res.cloudinary.com/.../class.pdf',
+        levelIds: [{ _id: '123', name: 'Párvulos' }],
+        date: '2026-08-16',
+        churchId: '679d017daf1fff94edac0c1a',
       },
     },
   })
   @ApiQuery({
     name: 'date',
-    required: false,
-    description: 'Reference date (ISO). Defaults to today',
+    required: true,
+    description: 'Attendance date (YYYY-MM-DD)',
   })
-  getWeeklyWindow(@Query('date') date?: string) {
-    return this.classBusiness.getWeeklyWindow(date);
+  @ApiQuery({
+    name: 'levelId',
+    required: false,
+    description: 'Filter by level ID',
+  })
+  async getClassForWeek(
+    @Query('date') date: string,
+    @Query('levelId') levelId?: string,
+    @Auth() user?: JWTPayload,
+  ) {
+    return this.classBusiness.getForAttendanceDate(
+      date,
+      user?.churchId,
+      levelId,
+    );
   }
 
   @UseGuards(AuthGuard)
@@ -508,8 +535,8 @@ export class SundaySchoolController {
   @ApiOkResponse({ description: 'Class details' })
   @ApiBadRequestResponse({ description: 'Invalid class ID' })
   @ApiParam({ name: 'id', required: true, description: 'Class ID' })
-  async getClassById(@Param('id') id: string) {
-    return this.classBusiness.getById(id);
+  async getClassById(@Param('id') id: string, @Auth() user?: JWTPayload) {
+    return this.classBusiness.getById(id, user?.userId);
   }
 
   @UseGuards(AuthGuard, PermissionGuard)

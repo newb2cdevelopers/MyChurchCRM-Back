@@ -37,7 +37,7 @@ export class SundaySchoolClassProvider {
 
   async getAllByChurch(
     churchId: string,
-    levelId?: string,
+    levelIds?: string[],
     page?: number,
     limit?: number,
   ): Promise<PaginatedResult<SundaySchoolClass>> {
@@ -52,8 +52,8 @@ export class SundaySchoolClassProvider {
 
     const filter: Record<string, unknown> = { churchId };
 
-    if (levelId) {
-      filter.levelIds = levelId;
+    if (levelIds?.length) {
+      filter.levelIds = { $in: levelIds };
     }
 
     const [data, totalRecords] = await Promise.all([
@@ -80,6 +80,48 @@ export class SundaySchoolClassProvider {
       path: 'levelIds',
       model: 'Level',
       select: 'name minAge maxAge',
+    });
+  }
+
+  /**
+   * Returns the most recent class of the church whose date falls within the
+   * given week window, optionally filtered by level.
+   */
+  async findForWeek(
+    churchId: string,
+    startOfWeek: Date,
+    endOfWeek: Date,
+    levelId?: string,
+  ): Promise<SundaySchoolClassDocument | null> {
+    const filter: Record<string, unknown> = {
+      churchId,
+      date: { $gte: startOfWeek, $lte: endOfWeek },
+    };
+
+    if (levelId) {
+      filter.levelIds = levelId;
+    }
+
+    return this.classModel.findOne(filter).sort({ date: -1 }).populate({
+      path: 'levelIds',
+      model: 'Level',
+      select: 'name minAge maxAge',
+    });
+  }
+
+  /**
+   * Returns a class of the church that shares the same date and at least one
+   * level with the given level list. Used to prevent duplicate classes.
+   */
+  async findByDateAndLevels(
+    churchId: string,
+    date: Date,
+    levelIds: string[],
+  ): Promise<SundaySchoolClassDocument | null> {
+    return this.classModel.findOne({
+      churchId,
+      date,
+      levelIds: { $in: levelIds },
     });
   }
 

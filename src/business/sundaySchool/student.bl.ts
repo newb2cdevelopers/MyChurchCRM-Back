@@ -57,7 +57,11 @@ export class StudentBusiness {
           return EMPTY_RESULT;
         }
 
-        levelIds = teacherLevelIds;
+        // Keep a specific levelId filter when provided; otherwise scope to
+        // all the teacher's levels.
+        if (!levelId) {
+          levelIds = teacherLevelIds;
+        }
       }
     }
 
