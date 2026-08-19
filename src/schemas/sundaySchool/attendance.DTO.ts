@@ -34,6 +34,11 @@ export class RegisterAttendanceDto {
 
   @IsString()
   @IsNotEmpty()
+  @ApiProperty({ example: 'Domingo 07:00 am' })
+  service: string;
+
+  @IsString()
+  @IsNotEmpty()
   @ApiProperty({ example: 'Lección 5' })
   lessonName: string;
 

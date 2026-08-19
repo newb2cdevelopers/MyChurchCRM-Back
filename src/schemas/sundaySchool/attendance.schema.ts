@@ -32,6 +32,9 @@ export class SundaySchoolAttendance {
   date: Date;
 
   @Prop({ required: true })
+  service: string;
+
+  @Prop({ required: true })
   lessonName: string;
 
   @Prop({
@@ -52,4 +55,7 @@ export const SundaySchoolAttendanceSchema = SchemaFactory.createForClass(
   SundaySchoolAttendance,
 );
 
-SundaySchoolAttendanceSchema.index({ levelId: 1, date: 1 }, { unique: true });
+SundaySchoolAttendanceSchema.index(
+  { levelId: 1, date: 1, service: 1 },
+  { unique: true },
+);

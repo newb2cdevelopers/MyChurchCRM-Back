@@ -142,12 +142,14 @@ export class AttendanceBusiness {
     const existingAttendance = await this.provider.findByLevelAndDate(
       attendance.levelId,
       attendance.date,
+      attendance.service,
     );
 
     if (existingAttendance) {
       response.data = await this.provider.updateByLevelAndDate(
         attendance.levelId,
         attendance.date,
+        attendance.service,
         attendance,
       );
     } else {

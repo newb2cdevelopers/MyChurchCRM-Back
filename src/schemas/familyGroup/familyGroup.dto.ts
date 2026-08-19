@@ -17,6 +17,11 @@ export class CreateFamilyGroupDto {
   @ApiProperty({ example: '679d017daf1fff94edac0c1a' })
   leader: string;
 
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({ example: 'María Pérez' })
+  host?: string;
+
   @IsMongoId()
   @IsNotEmpty()
   @ApiProperty({ example: '679d017daf1fff94edac0c1a' })
@@ -63,6 +68,11 @@ export class UpdateFamilyGroupDto {
   @IsOptional()
   @ApiPropertyOptional({ example: '679d017daf1fff94edac0c1a' })
   leader?: string;
+
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({ example: 'María Pérez' })
+  host?: string;
 
   @IsMongoId()
   @IsOptional()

@@ -239,20 +239,28 @@ export class FamilyGroupProvider {
       return response;
     }
 
+    const setFields: Record<string, unknown> = {
+      leader: familyGroup.leader,
+      neighborhood: familyGroup.neighborhood,
+      address: familyGroup.address,
+      time: familyGroup.time,
+      day: familyGroup.day,
+      startDate: familyGroup.startDate,
+      status: familyGroup.status,
+    };
+
+    // host is optional and may be absent on legacy groups; only set it when
+    // the payload actually provides a value.
+    if (familyGroup.host) {
+      setFields.host = familyGroup.host;
+    }
+
     await this.familyGroupModel.updateOne(
       {
         _id: id,
       },
       {
-        $set: {
-          leader: familyGroup.leader,
-          neighborhood: familyGroup.neighborhood,
-          address: familyGroup.address,
-          time: familyGroup.time,
-          day: familyGroup.day,
-          startDate: familyGroup.startDate,
-          status: familyGroup.status,
-        },
+        $set: setFields,
       },
     );
 

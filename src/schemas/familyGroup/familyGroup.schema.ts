@@ -107,6 +107,10 @@ export class FamilyGroup {
   })
   leader: string;
 
+  @ApiProperty({ example: 'María Pérez' })
+  @Prop()
+  host: string;
+
   @ApiProperty({ example: '679d017daf1fff94edac0c1a' })
   @Prop({
     required: true,
