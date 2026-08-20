@@ -61,6 +61,7 @@ export type UserDocument = Users & mongoose.Document;
 export const UserSchema = SchemaFactory.createForClass(Users);
 
 UserSchema.index({ email: 1 });
+UserSchema.index({ churchId: 1, createdAt: -1 });
 
 UserSchema.pre('save', async function (next: (err?: Error) => void) {
   const user = this as UserDocument;

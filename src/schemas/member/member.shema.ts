@@ -205,4 +205,5 @@ export type MemberDocument = Members & mongoose.Document;
 
 export const MemberSchema = SchemaFactory.createForClass(Members);
 MemberSchema.index({ churchId: 1, createdAt: -1 });
+MemberSchema.index({ churchId: 1, workfront: 1 });
 MemberSchema.index({ documentNumber: 1, churchId: 1 }, { unique: true });

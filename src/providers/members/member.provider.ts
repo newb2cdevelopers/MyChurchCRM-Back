@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery } from 'mongoose';
 import { Members, MemberDocument } from 'src/schemas/member/member.shema';
@@ -16,6 +16,8 @@ import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
 
 @Injectable()
 export class MemberProvider {
+  private readonly logger = new Logger(MemberProvider.name);
+
   constructor(
     @InjectModel(Members.name) private memberModel: Model<MemberDocument>,
     @InjectModel(Users.name) private userModel: Model<UserDocument>,
@@ -47,7 +49,10 @@ export class MemberProvider {
       filter.$or = [{ fullName: regex }, { documentNumber: regex }];
     }
 
-    const baseQuery = this.memberModel.find(filter).sort({ createdAt: -1 });
+    const baseQuery = this.memberModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
 
     const populatedQuery = churchId
       ? baseQuery.populate({ path: 'workfront', model: 'Workfront' })
@@ -64,7 +69,10 @@ export class MemberProvider {
     });
     const totalPages = Math.ceil(totalRecords / pageSize);
 
-    return { data, metadata: { currentPage, totalPages, totalRecords } };
+    return {
+      data: data as unknown as Members[],
+      metadata: { currentPage, totalPages, totalRecords },
+    };
   }
 
   async findByEmails(emails: string[]): Promise<Pick<Members, 'email'>[]> {
@@ -114,10 +122,13 @@ export class MemberProvider {
   }
 
   async getMemberById(id: string): Promise<Members> {
-    return await this.memberModel.findById(id).populate({
-      path: 'workfront',
-      model: 'Workfront',
-    });
+    return await this.memberModel
+      .findById(id)
+      .populate({
+        path: 'workfront',
+        model: 'Workfront',
+      })
+      .lean();
   }
 
   async changeStatus(
@@ -181,7 +192,11 @@ export class MemberProvider {
 
       return response;
     } catch (error) {
-      console.log(error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        `[changeStatus] Error updating member status: ${err.message}`,
+        err.stack,
+      );
       response.isSuccessful = false;
       response.message = 'Error actualizando el estado del miembro.';
       return response;
@@ -227,16 +242,20 @@ export class MemberProvider {
 
       return response;
     } catch (error: unknown) {
-      console.log(error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        `[create] Error creating member: ${err.message}`,
+        err.stack,
+      );
       response.isSuccessful = false;
 
-      const err = error as { errmsg?: string; message?: unknown };
+      const errMsg = error as { errmsg?: string; message?: unknown };
 
       response.message =
-        (typeof err?.errmsg === 'string' &&
-          err.errmsg.includes('duplicate key')) ||
-        (typeof err?.message === 'string' &&
-          err.message.includes('duplicate key'))
+        (typeof errMsg?.errmsg === 'string' &&
+          errMsg.errmsg.includes('duplicate key')) ||
+        (typeof errMsg?.message === 'string' &&
+          errMsg.message.includes('duplicate key'))
           ? 'El usuario ya se encuentra registrado'
           : 'Se ha presentado un error creando el miembro';
 
@@ -299,13 +318,22 @@ export class MemberProvider {
 
         return response;
       } catch (error) {
-        console.log(error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.logger.error(
+          `[updateGeneralMemberInfo] Error updating general info: ${err.message}`,
+          err.stack,
+        );
 
         response.isSuccessful = false;
         response.message = 'Error actualizando la información general.';
         return response;
       }
     } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        `[updateGeneralMemberInfo] Error updating general info: ${err.message}`,
+        err.stack,
+      );
       response.isSuccessful = false;
       response.message = 'Error actualizando la información general.';
       return response;
@@ -383,7 +411,11 @@ export class MemberProvider {
           );
         }
       } catch (error) {
-        console.log(error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.logger.error(
+          `[updateAdditionalAcademicStudies] Error updating academic studies: ${err.message}`,
+          err.stack,
+        );
 
         response.isSuccessful = false;
         response.message = 'Error actualizando la información académica.';
@@ -497,7 +529,11 @@ export class MemberProvider {
           );
         }
       } catch (error) {
-        console.log(error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.logger.error(
+          `[updateRelativeInformation] Error updating relative info: ${err.message}`,
+          err.stack,
+        );
 
         response.isSuccessful = false;
         response.message = 'Error actualizando la información familiar.';
@@ -590,7 +626,11 @@ export class MemberProvider {
           );
         }
       } catch (error) {
-        console.log(error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.logger.error(
+          `[updateMinistryStudies] Error updating ministry studies: ${err.message}`,
+          err.stack,
+        );
 
         response.isSuccessful = false;
         response.message = 'Información de estudios ministeriales inválida.';
@@ -692,7 +732,11 @@ export class MemberProvider {
           );
         }
       } catch (error) {
-        console.log(error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.logger.error(
+          `[updateWorkfronts] Error updating workfronts: ${err.message}`,
+          err.stack,
+        );
 
         response.isSuccessful = false;
         response.message =

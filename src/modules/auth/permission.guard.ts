@@ -42,14 +42,12 @@ export class PermissionGuard implements CanActivate {
       ? permission.functionalityRoute
       : '/' + permission.functionalityRoute;
 
-    const hasAction = permissions.some((p: Record<string, unknown>) => {
-      const funcDoc = p.functionalityId as Record<string, unknown>;
+    const hasAction = permissions.some((p) => {
+      // functionalityId is populated at runtime with the Functionality document, even though the schema types it as a string.
+      const funcDoc = p.functionalityId as unknown as { route?: string };
       if (funcDoc?.route !== route) return false;
 
-      const actions = p.actions as
-        | { name: string; enabled: boolean }[]
-        | undefined;
-      return actions?.some((a) => a.name === permission.action && a.enabled);
+      return p.actions?.some((a) => a.name === permission.action && a.enabled);
     });
 
     if (!hasAction) throw new ForbiddenException();
