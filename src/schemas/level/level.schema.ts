@@ -26,3 +26,5 @@ export type LevelDocument = Level & mongoose.Document;
 export const LevelSchema = SchemaFactory.createForClass(Level);
 
 LevelSchema.index({ name: 1, churchId: 1 }, { unique: true });
+LevelSchema.index({ churchId: 1, createdAt: -1 });
+LevelSchema.index({ teachers: 1 });

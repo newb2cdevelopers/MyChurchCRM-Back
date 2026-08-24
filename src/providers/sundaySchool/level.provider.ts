@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model } from 'mongoose';
 import { Level, LevelDocument } from 'src/schemas/level/level.schema';
 import { CreateLevelDto, UpdateLevelDto } from 'src/schemas/level/level.DTO';
 import { Students, StudentDocument } from 'src/schemas/student/student.schema';
 import { Users, UserDocument } from 'src/schemas/user/user.schema';
+import { TtlCache } from 'src/utilities/ttl-cache';
 
 export interface UserScopeInfo {
   roleNames: string[];
@@ -13,6 +14,10 @@ export interface UserScopeInfo {
 
 @Injectable()
 export class LevelProvider {
+  private readonly logger = new Logger(LevelProvider.name);
+  private readonly userScopeCache = new TtlCache<UserScopeInfo>(60_000);
+  private readonly teacherLevelsCache = new TtlCache<string[]>(60_000);
+
   constructor(
     @InjectModel(Level.name)
     private readonly levelModel: Model<LevelDocument>,
@@ -29,27 +34,52 @@ export class LevelProvider {
   }
 
   async getUserScopeInfo(userId: string): Promise<UserScopeInfo> {
+    const cacheKey = `user-scope:${userId}`;
+    const cached = this.userScopeCache.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
     const user = await this.userModel
       .findById(userId)
       .populate({ path: 'roles', model: 'Role', select: 'name' })
-      .select('memberId roles');
+      .select('memberId roles')
+      .lean();
 
-    if (!user) return { roleNames: [] };
+    if (!user) {
+      const emptyResult = { roleNames: [] };
+      this.userScopeCache.set(cacheKey, emptyResult);
+      return emptyResult;
+    }
 
     const roles = user.roles as unknown as { name: string }[];
 
-    return {
+    const result = {
       roleNames: roles?.map((r) => r.name) || [],
       memberId: user.memberId?.toString(),
     };
+
+    this.userScopeCache.set(cacheKey, result);
+    return result;
   }
 
   async getLevelIdsByTeacher(memberId: string): Promise<string[]> {
+    const cacheKey = `teacher-levels:${memberId}`;
+    const cached = this.teacherLevelsCache.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
     const levels = await this.levelModel
       .find({ teachers: memberId })
-      .select('_id');
+      .select('_id')
+      .lean();
 
-    return levels.map((level) => level._id.toString());
+    const result = levels.map((level) => level._id.toString());
+    this.teacherLevelsCache.set(cacheKey, result);
+    return result;
   }
 
   async getAllByChurch(
@@ -70,21 +100,24 @@ export class LevelProvider {
     return this.levelModel
       .find(filter)
       .populate('teachers')
-      .sort({ minAge: 1 });
+      .sort({ minAge: 1 })
+      .lean();
   }
 
   async getById(id: string): Promise<LevelDocument | null> {
-    return this.levelModel.findById(id).populate('teachers');
+    return this.levelModel.findById(id).populate('teachers').lean();
   }
 
   async getLevelsByIdsAndChurch(
     levelIds: string[],
     churchId: string,
   ): Promise<LevelDocument[]> {
-    return this.levelModel.find({
-      _id: { $in: levelIds },
-      churchId,
-    });
+    return this.levelModel
+      .find({
+        _id: { $in: levelIds },
+        churchId,
+      })
+      .lean();
   }
 
   /**
@@ -104,14 +137,14 @@ export class LevelProvider {
       filter._id = { $ne: excludeLevelId };
     }
 
-    return this.levelModel.find(filter).select('name teachers');
+    return this.levelModel.find(filter).select('name teachers').lean();
   }
 
   async findByNameAndChurch(
     name: string,
     churchId: string,
   ): Promise<LevelDocument | null> {
-    return this.levelModel.findOne({ name, churchId });
+    return this.levelModel.findOne({ name, churchId }).lean();
   }
 
   async update(
@@ -120,7 +153,8 @@ export class LevelProvider {
   ): Promise<LevelDocument | null> {
     return this.levelModel
       .findByIdAndUpdate(id, { $set: level }, { new: true })
-      .populate('teachers');
+      .populate('teachers')
+      .lean();
   }
 
   async delete(id: string): Promise<void> {

@@ -50,3 +50,4 @@ export type StudentDocument = Students & mongoose.Document;
 export const StudentSchema = SchemaFactory.createForClass(Students);
 
 StudentSchema.index({ documentNumber: 1, churchId: 1 }, { unique: true });
+StudentSchema.index({ churchId: 1, levelId: 1, createdAt: -1 });

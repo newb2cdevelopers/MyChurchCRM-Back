@@ -66,7 +66,8 @@ export class SundaySchoolClassProvider {
         })
         .sort({ date: -1 })
         .skip(skip)
-        .limit(pageSize),
+        .limit(pageSize)
+        .lean(),
       this.classModel.countDocuments(filter),
     ]);
 
@@ -76,11 +77,14 @@ export class SundaySchoolClassProvider {
   }
 
   async getById(id: string): Promise<SundaySchoolClassDocument | null> {
-    return this.classModel.findById(id).populate({
-      path: 'levelIds',
-      model: 'Level',
-      select: 'name minAge maxAge',
-    });
+    return this.classModel
+      .findById(id)
+      .populate({
+        path: 'levelIds',
+        model: 'Level',
+        select: 'name minAge maxAge',
+      })
+      .lean();
   }
 
   /**
@@ -102,11 +106,15 @@ export class SundaySchoolClassProvider {
       filter.levelIds = levelId;
     }
 
-    return this.classModel.findOne(filter).sort({ date: -1 }).populate({
-      path: 'levelIds',
-      model: 'Level',
-      select: 'name minAge maxAge',
-    });
+    return this.classModel
+      .findOne(filter)
+      .sort({ date: -1 })
+      .populate({
+        path: 'levelIds',
+        model: 'Level',
+        select: 'name minAge maxAge',
+      })
+      .lean();
   }
 
   /**
@@ -118,11 +126,13 @@ export class SundaySchoolClassProvider {
     date: Date,
     levelIds: string[],
   ): Promise<SundaySchoolClassDocument | null> {
-    return this.classModel.findOne({
-      churchId,
-      date,
-      levelIds: { $in: levelIds },
-    });
+    return this.classModel
+      .findOne({
+        churchId,
+        date,
+        levelIds: { $in: levelIds },
+      })
+      .lean();
   }
 
   async update(
@@ -135,7 +145,8 @@ export class SundaySchoolClassProvider {
         path: 'levelIds',
         model: 'Level',
         select: 'name minAge maxAge',
-      });
+      })
+      .lean();
   }
 
   async delete(id: string): Promise<void> {

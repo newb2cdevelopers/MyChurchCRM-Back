@@ -19,7 +19,8 @@ export class SundaySchoolAttendanceProvider {
       .find({ levelId })
       .populate('studentsAttendance.studentId')
       .populate('teacherId')
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .lean();
   }
 
   async findByLevelAndDate(
@@ -27,7 +28,7 @@ export class SundaySchoolAttendanceProvider {
     date: string,
     service: string,
   ): Promise<SundaySchoolAttendanceDocument | null> {
-    return this.attendanceModel.findOne({ levelId, date, service });
+    return this.attendanceModel.findOne({ levelId, date, service }).lean();
   }
 
   async create(
@@ -42,10 +43,8 @@ export class SundaySchoolAttendanceProvider {
     service: string,
     attendance: RegisterAttendanceDto,
   ): Promise<SundaySchoolAttendanceDocument | null> {
-    return this.attendanceModel.findOneAndUpdate(
-      { levelId, date, service },
-      attendance,
-      { new: true },
-    );
+    return this.attendanceModel
+      .findOneAndUpdate({ levelId, date, service }, attendance, { new: true })
+      .lean();
   }
 }

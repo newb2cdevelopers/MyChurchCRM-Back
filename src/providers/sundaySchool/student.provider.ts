@@ -51,7 +51,8 @@ export class StudentProvider {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit || 10)
-        .populate('levelId'),
+        .populate('levelId')
+        .lean(),
       this.studentModel.countDocuments(filter),
     ]);
 
@@ -65,7 +66,7 @@ export class StudentProvider {
   }
 
   async getById(id: string): Promise<StudentDocument | null> {
-    return this.studentModel.findById(id).populate('levelId');
+    return this.studentModel.findById(id).populate('levelId').lean();
   }
 
   async findByDocument(
@@ -79,7 +80,7 @@ export class StudentProvider {
       filter._id = { $ne: excludeId };
     }
 
-    return this.studentModel.findOne(filter);
+    return this.studentModel.findOne(filter).lean();
   }
 
   async update(
@@ -88,7 +89,8 @@ export class StudentProvider {
   ): Promise<StudentDocument | null> {
     return this.studentModel
       .findByIdAndUpdate(id, { $set: student }, { new: true })
-      .populate('levelId');
+      .populate('levelId')
+      .lean();
   }
 
   async delete(id: string): Promise<void> {
@@ -96,6 +98,6 @@ export class StudentProvider {
   }
 
   async getByLevel(levelId: string): Promise<StudentDocument[]> {
-    return this.studentModel.find({ levelId }).select('_id');
+    return this.studentModel.find({ levelId }).select('_id').lean();
   }
 }
