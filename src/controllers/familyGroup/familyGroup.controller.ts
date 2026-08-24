@@ -48,7 +48,7 @@ export class FamiliyGroupController {
   @ApiOperation({
     summary: 'Get all family groups',
     description:
-      'Returns a paginated list of family groups. Supports filtering by church, search by code/leader/address/day, and pagination via page and limit query params.',
+      "Returns a paginated list of family groups for the authenticated user's church. Supports search by code/leader/address/day, and pagination via page and limit query params.",
   })
   @ApiOkResponse({
     description: 'Paginated list of family groups',
@@ -70,11 +70,6 @@ export class FamiliyGroupController {
     },
   })
   @ApiQuery({
-    name: 'churchId',
-    required: false,
-    description: 'Filter family groups by church ID',
-  })
-  @ApiQuery({
     name: 'search',
     required: false,
     description: 'Search by code, leader name, address or day',
@@ -90,14 +85,13 @@ export class FamiliyGroupController {
     description: 'Items per page (max 100)',
   })
   async getAllFamilyGroups(
-    @Query('churchId') churchId: string,
     @Query('search') search: string,
     @Query('page') page: number,
     @Query('limit') limit: number,
     @Auth() user: JWTPayload,
   ): Promise<PaginatedResult<FamilyGroup>> {
     return await this.familyGroupBusiness.getAllFamilyGroups(
-      churchId,
+      user.churchId,
       search,
       page,
       limit,
@@ -184,6 +178,7 @@ export class FamiliyGroupController {
     @Auth() user: JWTPayload,
   ): Promise<GeneralResponse> {
     familyGroup.created_by = user.userId;
+    familyGroup.churchId = user.churchId;
     return await this.familyGroupBusiness.create(familyGroup);
   }
 

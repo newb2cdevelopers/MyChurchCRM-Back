@@ -61,6 +61,11 @@ export class CreateFamilyGroupDto {
   @IsOptional()
   @ApiPropertyOptional({ example: '62b5eb1ab5f08f33e6de2c28' })
   created_by?: string;
+
+  @IsMongoId()
+  @IsOptional()
+  @ApiPropertyOptional({ example: '679d017daf1fff94edac0c1a' })
+  churchId?: string;
 }
 
 export class UpdateFamilyGroupDto {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery } from 'mongoose';
 import {
@@ -26,9 +26,20 @@ import {
 
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
+import { TtlCache } from 'src/utilities/ttl-cache';
+
+// Cache for getUserScopeInfo (user roles/zone/member) — changes rarely.
+const USER_SCOPE_CACHE_TTL_MS = 60_000;
 
 @Injectable()
 export class FamilyGroupProvider {
+  private readonly logger = new Logger(FamilyGroupProvider.name);
+  private readonly userScopeCache = new TtlCache<{
+    roleNames: string[];
+    zoneId?: string;
+    memberId?: string;
+  }>(USER_SCOPE_CACHE_TTL_MS);
+
   constructor(
     @InjectModel(FamilyGroup.name)
     private familyGroupModel: Model<FamilyGroupDocument>,
@@ -43,33 +54,51 @@ export class FamilyGroupProvider {
   ) {}
 
   async getFamilyGroupById(id: string) {
-    return this.familyGroupModel.findById(id).populate([
-      'leader',
-      {
-        path: 'neighborhood',
-        populate: {
-          path: 'locality',
-          populate: { path: 'zone' },
+    return this.familyGroupModel
+      .findById(id)
+      .populate([
+        'leader',
+        {
+          path: 'neighborhood',
+          populate: {
+            path: 'locality',
+            populate: { path: 'zone' },
+          },
         },
-      },
-    ]);
+      ])
+      .lean();
   }
 
   async getUserScopeInfo(userId: string) {
+    const cacheKey = `user-scope:${userId}`;
+    const cached = this.userScopeCache.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
     const user = await this.userGroupModel
       .findById(userId)
       .populate({ path: 'roles', model: 'Role', select: 'name' })
-      .select('zoneId memberId roles');
+      .select('zoneId memberId roles')
+      .lean();
 
-    if (!user) return { roleNames: [] as string[] };
-
-    const roles = user.roles as unknown as { name: string }[];
-
-    return {
-      roleNames: roles?.map((r) => r.name) || [],
-      zoneId: user.zoneId?.toString(),
-      memberId: user.memberId?.toString(),
+    const result = {
+      roleNames: [] as string[],
+      zoneId: undefined as string | undefined,
+      memberId: undefined as string | undefined,
     };
+
+    if (user) {
+      const roles = user.roles as unknown as { name: string }[];
+      result.roleNames = roles?.map((r) => r.name) || [];
+      result.zoneId = user.zoneId?.toString();
+      result.memberId = user.memberId?.toString();
+    }
+
+    this.userScopeCache.set(cacheKey, result);
+
+    return result;
   }
 
   async getNeighborhoodIdsByZone(zoneId: string) {
@@ -97,25 +126,12 @@ export class FamilyGroupProvider {
 
     let filter: FilterQuery<FamilyGroupDocument> = {};
     if (churchId) {
-      const membersInChurch = await this.memberModel
-        .find({ churchId })
-        .select('_id');
-      const memberIds = membersInChurch.map((member) => member._id);
-      filter = { leader: { $in: memberIds } };
+      filter = { churchId };
     }
 
     if (search) {
       const regex = new RegExp(search, 'i');
-      const leaderMatches = await this.memberModel
-        .find({ fullName: regex })
-        .select('_id');
-      const leaderIds = leaderMatches.map((m) => m._id);
-      filter.$or = [
-        { code: regex },
-        { address: regex },
-        { day: regex },
-        { leader: { $in: leaderIds } },
-      ];
+      filter.$or = [{ code: regex }, { address: regex }, { day: regex }];
     }
 
     if (scopeFilter) {
@@ -128,7 +144,8 @@ export class FamilyGroupProvider {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit || 10)
-        .populate(['leader', 'neighborhood']),
+        .populate(['leader', 'neighborhood'])
+        .lean(),
       this.familyGroupModel.countDocuments(filter),
     ]);
 
@@ -138,15 +155,17 @@ export class FamilyGroupProvider {
     });
     const totalPages = Math.ceil(totalRecords / pageSize);
 
-    return { data, metadata: { currentPage, totalPages, totalRecords } };
+    return {
+      data: data as unknown as FamilyGroup[],
+      metadata: { currentPage, totalPages, totalRecords },
+    };
   }
 
   async getFamilyGroupAttendance(familyGroupId: string) {
-    console.log(familyGroupId);
-
-    return this.familyGroupAttendanceModel.find({
-      familyGroup: familyGroupId,
-    });
+    return this.familyGroupAttendanceModel
+      .find({ familyGroup: familyGroupId })
+      .sort({ date: -1 })
+      .lean();
   }
 
   async create(familyGroup: CreateFamilyGroupDto): Promise<GeneralResponse> {
@@ -188,7 +207,11 @@ export class FamilyGroupProvider {
 
       return response;
     } catch (error) {
-      console.log(error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        `[create] Error creating family group: ${err.message}`,
+        err.stack,
+      );
       response.isSuccessful = false;
 
       response.message = 'Se ha presentado un error creando el grupo familiar';
@@ -342,7 +365,11 @@ export class FamilyGroupProvider {
 
       return response;
     } catch (error) {
-      console.log(error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        `[registerFamilyGroupAttendance] Error registering attendance: ${err.message}`,
+        err.stack,
+      );
       response.isSuccessful = false;
 
       response.message =
@@ -440,7 +467,11 @@ export class FamilyGroupProvider {
           );
         }
       } catch (error) {
-        console.log(error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.logger.error(
+          `[registerFamilyGroupMember] Error updating member: ${err.message}`,
+          err.stack,
+        );
 
         response.isSuccessful = false;
         response.message = 'Error actualizando la información del integrante.';
@@ -450,11 +481,16 @@ export class FamilyGroupProvider {
 
       response.data = await this.familyGroupModel
         .findById(familyGroupId)
-        .populate(['leader', 'neighborhood']);
+        .populate(['leader', 'neighborhood'])
+        .lean();
 
       return response;
     } catch (error) {
-      console.log('error', error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        `[registerFamilyGroupMember] Error registering member: ${err.message}`,
+        err.stack,
+      );
 
       response.isSuccessful = false;
       response.message = 'Error actualizando la información del integrante';

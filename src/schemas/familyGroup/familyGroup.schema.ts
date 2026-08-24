@@ -144,8 +144,20 @@ export class FamilyGroup {
   status: string;
 
   @ApiProperty({ example: '62b5eb1ab5f08f33e6de2c28' })
-  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Users' })
+  @Prop({
+    required: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Users',
+  })
   created_by: string;
+
+  @ApiProperty({ example: '679d017daf1fff94edac0c1a' })
+  @Prop({
+    required: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Church',
+  })
+  churchId: string;
 
   @ApiProperty({ example: familyGroupExample })
   @Prop({ type: [FamilyGroupMemberSchema], default: [] })
@@ -155,3 +167,7 @@ export class FamilyGroup {
 export type FamilyGroupDocument = FamilyGroup & mongoose.Document;
 
 export const FamilyGroupSchema = SchemaFactory.createForClass(FamilyGroup);
+
+FamilyGroupSchema.index({ churchId: 1, createdAt: -1 });
+FamilyGroupSchema.index({ leader: 1 });
+FamilyGroupSchema.index({ code: 1 });
