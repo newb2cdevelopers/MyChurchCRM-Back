@@ -16,6 +16,7 @@ export const ACTION_NAMES = {
   CREATE_CLASS: 'create_class',
   EDIT_CLASS: 'edit_class',
   DELETE_CLASS: 'delete_class',
+  PROMOTE_STUDENTS: 'promote_students',
 } as const;
 
 export type ActionName = (typeof ACTION_NAMES)[keyof typeof ACTION_NAMES];

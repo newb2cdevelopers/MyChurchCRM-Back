@@ -55,6 +55,7 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
       { name: ACTION_NAMES.EDIT_CLASS, enabled: true },
       { name: ACTION_NAMES.DELETE_CLASS, enabled: true },
       { name: ACTION_NAMES.REGISTER_ATTENDANCE, enabled: false },
+      { name: ACTION_NAMES.PROMOTE_STUDENTS, enabled: true },
     ],
   },
   {
@@ -76,6 +77,7 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
       { name: ACTION_NAMES.EDIT_CLASS, enabled: false },
       { name: ACTION_NAMES.DELETE_CLASS, enabled: false },
       { name: ACTION_NAMES.REGISTER_ATTENDANCE, enabled: true },
+      { name: ACTION_NAMES.PROMOTE_STUDENTS, enabled: true },
     ],
   },
   {

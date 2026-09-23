@@ -6,6 +6,7 @@ import {
   UpdateStudentDto,
 } from 'src/schemas/student/student.DTO';
 import { Students } from 'src/schemas/student/student.schema';
+import { Level, LevelDocument } from 'src/schemas/level/level.schema';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
 
@@ -198,5 +199,176 @@ export class StudentBusiness {
     response.message = 'Estudiante eliminado correctamente';
 
     return response;
+  }
+
+  async getPromotionPreview(levelId: string, userId?: string) {
+    const level = await this.levelProvider.getById(levelId);
+
+    if (!level) {
+      return null;
+    }
+
+    const churchId = level.churchId.toString();
+
+    if (userId) {
+      const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
+        userId,
+      );
+
+      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+        const teacherLevelIds = await this.levelProvider.getLevelIdsByTeacher(
+          memberId,
+        );
+
+        if (!teacherLevelIds.includes(levelId)) {
+          return null;
+        }
+      }
+    }
+
+    const [allLevels, students] = await Promise.all([
+      this.levelProvider.getAllByChurch(churchId),
+      this.provider.getForPromotion(levelId),
+    ]);
+
+    const nextLevel = this.findNextLevel(allLevels || [], level);
+
+    return {
+      level,
+      nextLevel,
+      isLastLevel: !nextLevel,
+      students,
+    };
+  }
+
+  async promote(
+    levelId: string,
+    studentIds: string[],
+    userId?: string,
+    churchId?: string,
+  ): Promise<GeneralResponse> {
+    const response: GeneralResponse = { isSuccessful: false };
+
+    const level = await this.levelProvider.getById(levelId);
+
+    if (!level) {
+      response.message = 'El nivel seleccionado no es válido';
+
+      return response;
+    }
+
+    const currentChurchId = level.churchId.toString();
+
+    if (churchId && currentChurchId !== churchId) {
+      response.message = 'El nivel no pertenece a tu iglesia';
+
+      return response;
+    }
+
+    if (userId) {
+      const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
+        userId,
+      );
+
+      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+        const teacherLevelIds = await this.levelProvider.getLevelIdsByTeacher(
+          memberId,
+        );
+
+        if (!teacherLevelIds.includes(levelId)) {
+          response.message =
+            'Solo puedes promover estudiantes de tus niveles asignados';
+
+          return response;
+        }
+      }
+    }
+
+    if (!studentIds?.length) {
+      response.message =
+        'Debe seleccionar al menos un estudiante para promover';
+
+      return response;
+    }
+
+    const selectedStudents = await this.provider.getManyByIds(studentIds);
+
+    if (selectedStudents.length !== studentIds.length) {
+      response.message = 'Algunos estudiantes seleccionados no son válidos';
+
+      return response;
+    }
+
+    const invalid = selectedStudents.some(
+      (s) =>
+        !s.levelId ||
+        s.levelId.toString() !== levelId ||
+        s.churchId?.toString() !== currentChurchId ||
+        s.graduated,
+    );
+
+    if (invalid) {
+      response.message =
+        'Solo se pueden promover estudiantes que pertenezcan a este nivel';
+
+      return response;
+    }
+
+    const allLevels = await this.levelProvider.getAllByChurch(currentChurchId);
+    const nextLevel = this.findNextLevel(allLevels || [], level);
+
+    if (nextLevel) {
+      await this.provider.promoteMany(studentIds, {
+        levelId: nextLevel._id.toString(),
+      });
+      this.logger.log(
+        `[promote] Promoted ${studentIds.length} students from ${levelId} to ${nextLevel._id}`,
+      );
+      response.isSuccessful = true;
+      response.message = `Se promovieron ${studentIds.length} estudiante(s) al nivel ${nextLevel.name}`;
+      return response;
+    }
+
+    await this.provider.promoteMany(studentIds, {
+      levelId: null,
+      graduated: true,
+      graduatedAt: new Date(),
+    });
+    this.logger.log(
+      `[promote] Graduated ${studentIds.length} students from ${levelId}`,
+    );
+    response.isSuccessful = true;
+    response.message = `Se graduaron ${studentIds.length} estudiante(s) de Escuela Dominical`;
+    return response;
+  }
+
+  /**
+   * Returns the next level in the age-based ordering (minAge ascending).
+   * The next level is the one whose minAge is greater than the current
+   * level's maxAge. Returns null when the current level is the last one.
+   */
+  private findNextLevel(
+    levels: LevelDocument[],
+    currentLevel: LevelDocument,
+  ): Level | null {
+    const sortedLevels = [...levels].sort((a, b) => {
+      const aMin = a.minAge ?? 0;
+      const bMin = b.minAge ?? 0;
+      if (aMin !== bMin) return aMin - bMin;
+      return (a.maxAge ?? 0) - (b.maxAge ?? 0);
+    });
+
+    const currentMaxAge = currentLevel.maxAge ?? 0;
+    const currentId = currentLevel._id.toString();
+
+    for (const l of sortedLevels) {
+      const lMin = l.minAge ?? 0;
+      if (l._id.toString() === currentId) continue;
+      if (lMin > currentMaxAge) {
+        return l;
+      }
+    }
+
+    return null;
   }
 }

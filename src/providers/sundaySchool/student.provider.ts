@@ -30,7 +30,10 @@ export class StudentProvider {
   ): Promise<PaginatedResult<Students>> {
     const { skip } = calculatePagination({ page, limit });
 
-    const filter: FilterQuery<StudentDocument> = { churchId };
+    const filter: FilterQuery<StudentDocument> = {
+      churchId,
+      graduated: { $ne: true },
+    };
 
     if (levelIds?.length) {
       filter.levelId = { $in: levelIds };
@@ -98,6 +101,34 @@ export class StudentProvider {
   }
 
   async getByLevel(levelId: string): Promise<StudentDocument[]> {
-    return this.studentModel.find({ levelId }).select('_id').lean();
+    return this.studentModel
+      .find({ levelId, graduated: { $ne: true } })
+      .select('_id')
+      .lean();
+  }
+
+  async getForPromotion(levelId: string): Promise<StudentDocument[]> {
+    return this.studentModel
+      .find({ levelId, graduated: { $ne: true } })
+      .select('name lastName birthDate')
+      .sort({ name: 1, lastName: 1 })
+      .lean();
+  }
+
+  async getManyByIds(ids: string[]): Promise<StudentDocument[]> {
+    return this.studentModel
+      .find({ _id: { $in: ids } })
+      .select('_id levelId churchId graduated')
+      .lean();
+  }
+
+  async promoteMany(
+    studentIds: string[],
+    update: Partial<StudentDocument>,
+  ): Promise<void> {
+    await this.studentModel.updateMany(
+      { _id: { $in: studentIds } },
+      { $set: update },
+    );
   }
 }

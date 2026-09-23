@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsIn,
   IsMongoId,
   IsNotEmpty,
@@ -139,4 +140,16 @@ export class UpdateStudentDto {
   @IsMongoId()
   @ApiPropertyOptional({ example: '679d017daf1fff94edac0c1a' })
   levelId?: string;
+}
+
+export class PromoteStudentsDto {
+  @IsArray()
+  @IsMongoId({ each: true })
+  @IsNotEmpty()
+  @ApiProperty({
+    type: [String],
+    example: ['679d017daf1fff94edac0c1a', '679d017daf1fff94edac0c1b'],
+    description: 'IDs de los estudiantes a promover',
+  })
+  studentIds: string[];
 }

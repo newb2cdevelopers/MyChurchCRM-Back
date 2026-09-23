@@ -39,6 +39,7 @@ import { SundaySchoolClassBusiness } from 'src/business/sundaySchool/class.bl';
 import { CreateLevelDto, UpdateLevelDto } from 'src/schemas/level/level.DTO';
 import {
   CreateStudentDto,
+  PromoteStudentsDto,
   UpdateStudentDto,
 } from 'src/schemas/student/student.DTO';
 import { RegisterAttendanceDto } from 'src/schemas/sundaySchool/attendance.DTO';
@@ -200,6 +201,45 @@ export class SundaySchoolController {
   @ApiParam({ name: 'id', required: true, description: 'Level ID' })
   async deleteLevel(@Param('id') id: string): Promise<GeneralResponse> {
     return this.levelBusiness.remove(id);
+  }
+
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('sunday-school-levels', 'promote_students')
+  @Get('level/:id/promotion-preview')
+  @ApiOperation({
+    summary: 'Get promotion preview for a level',
+    description:
+      'Returns the next level and the list of students eligible for promotion.',
+  })
+  @ApiParam({ name: 'id', required: true, description: 'Level ID' })
+  async getPromotionPreview(
+    @Param('id') id: string,
+    @Auth() user?: JWTPayload,
+  ) {
+    return this.studentBusiness.getPromotionPreview(id, user?.userId);
+  }
+
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('sunday-school-levels', 'promote_students')
+  @Post('level/:id/promote')
+  @ApiOperation({
+    summary: 'Promote students to the next level',
+    description:
+      'Promotes selected students to the next level. If it is the last level, students are graduated (levelId becomes null).',
+  })
+  @ApiParam({ name: 'id', required: true, description: 'Level ID' })
+  @ApiBody({ type: PromoteStudentsDto })
+  async promoteStudents(
+    @Param('id') id: string,
+    @Body() body: PromoteStudentsDto,
+    @Auth() user?: JWTPayload,
+  ): Promise<GeneralResponse> {
+    return this.studentBusiness.promote(
+      id,
+      body.studentIds,
+      user?.userId,
+      user?.churchId,
+    );
   }
 
   // ------------------- STUDENTS -------------------

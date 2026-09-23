@@ -38,11 +38,17 @@ export class Students {
   @Prop()
   observations: string;
 
-  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Level' })
-  levelId: string;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Level' })
+  levelId?: string;
 
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Church' })
   churchId: string;
+
+  @Prop({ default: false })
+  graduated: boolean;
+
+  @Prop()
+  graduatedAt?: Date;
 }
 
 export type StudentDocument = Students & mongoose.Document;
