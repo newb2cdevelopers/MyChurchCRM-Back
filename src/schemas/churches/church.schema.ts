@@ -21,6 +21,9 @@ export class Church {
 
   @Prop({ type: [ChurchServiceSchema], default: [] })
   services: ChurchService[];
+
+  @Prop({ type: [String], default: [] })
+  familyGroupTypes: string[];
 }
 
 export type ChurchTextDocument = Church & mongoose.Document;

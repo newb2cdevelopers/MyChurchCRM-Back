@@ -57,6 +57,11 @@ export class CreateFamilyGroupDto {
   @ApiPropertyOptional({ example: 'Activo' })
   status?: string;
 
+  @IsString()
+  @IsNotEmpty()
+  @ApiProperty({ example: 'Jóvenes' })
+  type: string;
+
   @IsMongoId()
   @IsOptional()
   @ApiPropertyOptional({ example: '62b5eb1ab5f08f33e6de2c28' })
@@ -113,6 +118,11 @@ export class UpdateFamilyGroupDto {
   @IsOptional()
   @ApiPropertyOptional({ example: 'Activo' })
   status?: string;
+
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({ example: 'Jóvenes' })
+  type?: string;
 }
 
 class MemberAttendanceDto {

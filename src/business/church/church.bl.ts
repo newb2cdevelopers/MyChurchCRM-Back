@@ -78,4 +78,66 @@ export class ChurchBusiness {
 
     return normalized;
   }
+
+  async updateFamilyGroupTypes(
+    churchId: string,
+    familyGroupTypes: string[],
+  ): Promise<GeneralResponse> {
+    const response: GeneralResponse = { isSuccessful: false };
+
+    const church = await this.provider.getById(churchId);
+
+    if (!church) {
+      response.message = 'La iglesia no es válida';
+
+      return response;
+    }
+
+    const normalized = this.normalizeFamilyGroupTypes(familyGroupTypes);
+
+    if (!normalized) {
+      response.message = 'Cada tipo debe ser un texto no vacío, sin duplicados';
+
+      return response;
+    }
+
+    response.data = await this.provider.updateFamilyGroupTypes(
+      churchId,
+      normalized,
+    );
+    response.isSuccessful = true;
+    response.message = 'Tipos de grupos familiares actualizados correctamente';
+
+    return response;
+  }
+
+  /**
+   * Trims each type, drops empty entries and rejects duplicates
+   * (case-insensitive). Returns null when the list is invalid.
+   */
+  private normalizeFamilyGroupTypes(
+    familyGroupTypes: string[],
+  ): string[] | null {
+    const seen = new Set<string>();
+    const normalized: string[] = [];
+
+    for (const type of familyGroupTypes) {
+      const trimmed = type?.trim();
+
+      if (!trimmed) {
+        return null;
+      }
+
+      const key = trimmed.toLowerCase();
+
+      if (seen.has(key)) {
+        return null;
+      }
+
+      seen.add(key);
+      normalized.push(trimmed);
+    }
+
+    return normalized;
+  }
 }

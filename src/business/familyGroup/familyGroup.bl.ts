@@ -55,6 +55,21 @@ export class FamilyGroupBusiness {
   }
 
   async create(familyGroup: CreateFamilyGroupDto): Promise<GeneralResponse> {
+    const churchTypes = await this.provider.getChurchFamilyGroupTypes(
+      familyGroup.churchId,
+    );
+
+    if (!churchTypes) {
+      return { isSuccessful: false, message: 'La iglesia no es válida' };
+    }
+
+    if (!familyGroup.type || !churchTypes.includes(familyGroup.type)) {
+      return {
+        isSuccessful: false,
+        message: 'El tipo de grupo familiar no es válido',
+      };
+    }
+
     return this.provider.create(
       familyGroup,
     ) as unknown as Promise<GeneralResponse>;

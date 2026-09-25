@@ -45,3 +45,17 @@ export class UpdateChurchServicesDto {
   })
   services?: ChurchServiceDto[];
 }
+
+export class UpdateChurchFamilyGroupTypesDto {
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(50)
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['Niños', 'Jóvenes', 'Adultos', 'Hombres', 'Mujeres'],
+    description:
+      'Lista de tipos de grupos familiares configurados por la iglesia',
+  })
+  familyGroupTypes?: string[];
+}

@@ -16,6 +16,7 @@ import {
 import { Locality, LocalitySchema } from 'src/schemas/locality/locality.schema';
 import { Role, RoleSchema } from 'src/schemas/roles/role.schema';
 import { Users, UserSchema } from 'src/schemas/user/user.schema';
+import { Church, ChurchSchema } from 'src/schemas/churches/church.schema';
 
 import { FamilyGroupBusiness } from 'src/business/familyGroup/familyGroup.bl';
 import { FamilyGroupProvider } from 'src/providers/familiyGroup/familyGroup.provider';
@@ -39,6 +40,7 @@ import { RolePermissionModule } from 'src/modules/role-permission/role-permissio
     ]),
     MongooseModule.forFeature([{ name: Role.name, schema: RoleSchema }]),
     MongooseModule.forFeature([{ name: Users.name, schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: Church.name, schema: ChurchSchema }]),
     RolePermissionModule,
   ],
   controllers: [FamiliyGroupController],

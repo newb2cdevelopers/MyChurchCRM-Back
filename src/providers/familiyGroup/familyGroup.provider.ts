@@ -23,6 +23,7 @@ import {
   Locality,
   LocalityTextDocument,
 } from 'src/schemas/locality/locality.schema';
+import { Church, ChurchTextDocument } from 'src/schemas/churches/church.schema';
 
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
@@ -51,6 +52,7 @@ export class FamilyGroupProvider {
     private localityModel: Model<LocalityTextDocument>,
     @InjectModel(FamilyGroupAttendance.name)
     private familyGroupAttendanceModel: Model<FamilyGroupAttendanceDocument>,
+    @InjectModel(Church.name) private churchModel: Model<ChurchTextDocument>,
   ) {}
 
   async getFamilyGroupById(id: string) {
@@ -67,6 +69,15 @@ export class FamilyGroupProvider {
         },
       ])
       .lean();
+  }
+
+  async getChurchFamilyGroupTypes(churchId: string): Promise<string[] | null> {
+    const church = await this.churchModel
+      .findById(churchId)
+      .select('familyGroupTypes')
+      .lean();
+
+    return church?.familyGroupTypes || null;
   }
 
   async getUserScopeInfo(userId: string) {
@@ -276,6 +287,12 @@ export class FamilyGroupProvider {
     // the payload actually provides a value.
     if (familyGroup.host) {
       setFields.host = familyGroup.host;
+    }
+
+    // type is optional on update (legacy groups may not have it); only set it
+    // when the payload actually provides a value.
+    if (familyGroup.type) {
+      setFields.type = familyGroup.type;
     }
 
     await this.familyGroupModel.updateOne(

@@ -8,7 +8,10 @@ import {
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { ChurchBusiness } from 'src/business/church/church.bl';
 import { Church } from 'src/schemas/churches/church.schema';
-import { UpdateChurchServicesDto } from 'src/schemas/churches/church.DTO';
+import {
+  UpdateChurchServicesDto,
+  UpdateChurchFamilyGroupTypesDto,
+} from 'src/schemas/churches/church.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 
 @ApiTags('Churches')
@@ -80,5 +83,32 @@ export class ChurchController {
     @Body() body: UpdateChurchServicesDto,
   ): Promise<GeneralResponse> {
     return this.churchBusiness.updateServices(id, body.services || []);
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @Put(':id/family-group-types')
+  @ApiOperation({
+    summary: 'Update church family group types',
+    description:
+      'Replaces the list of family group types of a church. Requires authentication.',
+  })
+  @ApiOkResponse({
+    description: 'Family group types updated',
+    schema: {
+      example: {
+        isSuccessful: true,
+        message: 'Tipos de grupos familiares actualizados correctamente',
+      },
+    },
+  })
+  async updateChurchFamilyGroupTypes(
+    @Param('id') id: string,
+    @Body() body: UpdateChurchFamilyGroupTypesDto,
+  ): Promise<GeneralResponse> {
+    return this.churchBusiness.updateFamilyGroupTypes(
+      id,
+      body.familyGroupTypes || [],
+    );
   }
 }

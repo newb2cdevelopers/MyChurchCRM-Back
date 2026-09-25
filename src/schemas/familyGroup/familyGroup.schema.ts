@@ -143,6 +143,10 @@ export class FamilyGroup {
   @Prop({ required: true, default: 'Abierta' })
   status: string;
 
+  @ApiProperty({ example: 'Jóvenes' })
+  @Prop({ required: true })
+  type: string;
+
   @ApiProperty({ example: '62b5eb1ab5f08f33e6de2c28' })
   @Prop({
     required: true,

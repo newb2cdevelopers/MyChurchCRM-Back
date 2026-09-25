@@ -28,4 +28,15 @@ export class ChurchProvider {
       { new: true },
     );
   }
+
+  async updateFamilyGroupTypes(
+    churchId: string,
+    familyGroupTypes: string[],
+  ): Promise<ChurchTextDocument | null> {
+    return this.churchModel.findByIdAndUpdate(
+      churchId,
+      { $set: { familyGroupTypes } },
+      { new: true },
+    );
+  }
 }
