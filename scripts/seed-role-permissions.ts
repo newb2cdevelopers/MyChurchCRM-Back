@@ -4,6 +4,25 @@ import { ACTION_NAMES } from '../src/constants/action-names';
 
 config();
 
+/**
+ * Seed: Role Permissions + Functionalities.
+ *
+ * This script is the single source of truth for two things:
+ *   1. It ENSURES the functionalities referenced below exist in the
+ *      `functionalities` collection (upsert), so new functionalities do not
+ *      need to be inserted manually in the database anymore.
+ *   2. It upserts the `rolepermissions` entries (role → functionality →
+ *      scope + actions) for every role in PERMISSIONS_MAP.
+ *
+ * To add a new functionality in the future:
+ *   - Define its document in a constant (see SUNDAY_SCHOOL_REPORTS_FUNCTIONALITY)
+ *     and upsert it in main() using the module route to resolve the module id.
+ *   - Add its name to the `functionalityNames` array of every role that should
+ *     see it, and enable/disable its actions accordingly.
+ *   - Register its route in MODULE_FUNCTIONALITY_ORDER (backend) and in
+ *     ROUTE_COMPONENTS (frontend) so the tab renders.
+ */
+
 const MONGO_URI = process.env.DEV_DB_CONNECTION;
 const DRY_RUN = process.argv.includes('--dry-run');
 
@@ -13,6 +32,16 @@ interface RolePermissionEntry {
   scope: 'all' | 'own';
   actions: { name: string; enabled: boolean }[];
 }
+
+// Functionality documents that the seed ensures exist before building the
+// rolepermissions entries. New functionalities should be added here and
+// upserted in main() (see the upsert block below).
+const SUNDAY_SCHOOL_REPORTS_FUNCTIONALITY = {
+  name: 'Reportes Escuela Dominical',
+  route: '/sunday-school-reports',
+  active: true,
+  icon: 'assessment',
+};
 
 const PERMISSIONS_MAP: RolePermissionEntry[] = [
   {
@@ -29,6 +58,7 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
       'Estudiantes de Escuela Dominical',
       'Gestión de Niveles',
       'Gestión de Clases',
+      'Reportes Escuela Dominical',
     ],
     scope: 'all',
     actions: Object.values(ACTION_NAMES).map((name) => ({
@@ -42,6 +72,7 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
       'Estudiantes de Escuela Dominical',
       'Gestión de Niveles',
       'Gestión de Clases',
+      'Reportes Escuela Dominical',
     ],
     scope: 'all',
     actions: [
@@ -56,6 +87,7 @@ const PERMISSIONS_MAP: RolePermissionEntry[] = [
       { name: ACTION_NAMES.DELETE_CLASS, enabled: true },
       { name: ACTION_NAMES.REGISTER_ATTENDANCE, enabled: false },
       { name: ACTION_NAMES.PROMOTE_STUDENTS, enabled: true },
+      { name: ACTION_NAMES.VIEW_SUNDAY_SCHOOL_REPORTS, enabled: true },
     ],
   },
   {
@@ -148,6 +180,44 @@ async function main() {
     .find({})
     .project({ name: 1 })
     .toArray();
+
+  // Ensure the Sunday School reports functionality exists (upsert).
+  // Pattern for future functionalities: resolve the module by its route and
+  // upsert the functionality document here, before fetching the list below.
+  const modules = await db
+    .collection('modules')
+    .find({})
+    .project({ name: 1, route: 1 })
+    .toArray();
+
+  const moduleByRoute = new Map(modules.map((m) => [m.route, m._id]));
+  const sundaySchoolModuleId = moduleByRoute.get('sunday-school');
+
+  if (sundaySchoolModuleId) {
+    if (!DRY_RUN) {
+      await db.collection('functionalities').updateOne(
+        { name: SUNDAY_SCHOOL_REPORTS_FUNCTIONALITY.name },
+        {
+          $set: {
+            ...SUNDAY_SCHOOL_REPORTS_FUNCTIONALITY,
+            module: sundaySchoolModuleId,
+          },
+        },
+        { upsert: true },
+      );
+      console.log(
+        `  ✓ Functionality ensured: "${SUNDAY_SCHOOL_REPORTS_FUNCTIONALITY.name}" (${SUNDAY_SCHOOL_REPORTS_FUNCTIONALITY.route})`,
+      );
+    } else {
+      console.log(
+        `  → (dry-run) Would ensure functionality: "${SUNDAY_SCHOOL_REPORTS_FUNCTIONALITY.name}" (${SUNDAY_SCHOOL_REPORTS_FUNCTIONALITY.route})`,
+      );
+    }
+  } else {
+    console.warn(
+      '  ⚠ Module "sunday-school" not found — skipping functionality upsert',
+    );
+  }
 
   const functionalities = await db
     .collection('functionalities')

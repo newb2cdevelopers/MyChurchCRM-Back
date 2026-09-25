@@ -23,7 +23,7 @@ export class SundaySchoolAttendance {
   _id: number;
 
   @Prop({ type: [StudentAttendanceSchema], default: [] })
-  studentsAttendance: [StudentAttendance];
+  studentsAttendance: StudentAttendance[];
 
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Level' })
   levelId: string;

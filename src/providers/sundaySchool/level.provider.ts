@@ -108,6 +108,15 @@ export class LevelProvider {
     return this.levelModel.findById(id).populate('teachers').lean();
   }
 
+  async getLevelIdsByChurch(churchId: string): Promise<string[]> {
+    const levels = await this.levelModel
+      .find({ churchId })
+      .select('_id')
+      .lean();
+
+    return levels.map((level) => level._id.toString());
+  }
+
   async getLevelsByIdsAndChurch(
     levelIds: string[],
     churchId: string,

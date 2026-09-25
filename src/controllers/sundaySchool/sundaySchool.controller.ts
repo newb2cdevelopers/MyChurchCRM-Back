@@ -35,6 +35,7 @@ import { LevelBusiness } from 'src/business/sundaySchool/level.bl';
 import { StudentBusiness } from 'src/business/sundaySchool/student.bl';
 import { AttendanceBusiness } from 'src/business/sundaySchool/attendance.bl';
 import { SundaySchoolClassBusiness } from 'src/business/sundaySchool/class.bl';
+import { SundaySchoolReportBusiness } from 'src/business/sundaySchool/report.bl';
 
 import { CreateLevelDto, UpdateLevelDto } from 'src/schemas/level/level.DTO';
 import {
@@ -43,6 +44,7 @@ import {
   UpdateStudentDto,
 } from 'src/schemas/student/student.DTO';
 import { RegisterAttendanceDto } from 'src/schemas/sundaySchool/attendance.DTO';
+import { AttendanceReportQueryDto } from 'src/schemas/sundaySchool/report.DTO';
 import {
   CreateClassDto,
   UpdateClassDto,
@@ -64,6 +66,7 @@ export class SundaySchoolController {
     private readonly studentBusiness: StudentBusiness,
     private readonly attendanceBusiness: AttendanceBusiness,
     private readonly classBusiness: SundaySchoolClassBusiness,
+    private readonly reportBusiness: SundaySchoolReportBusiness,
   ) {}
 
   // ------------------- LEVELS -------------------
@@ -400,31 +403,58 @@ export class SundaySchoolController {
   @ApiOperation({
     summary: 'Get attendance records of a level',
     description:
-      'Returns all attendance records of a Sunday School level, sorted by date descending. Teachers only see records of the levels they are assigned to.',
+      'Returns a paginated list of attendance records of a Sunday School level, sorted by date descending. Supports search by lesson name or comments. Teachers only see records of the levels they are assigned to.',
   })
   @ApiOkResponse({
-    description: 'Attendance records',
+    description: 'Paginated attendance records',
     schema: {
-      example: [
-        {
-          _id: '679d017daf1fff94edac0c1a',
-          date: '2025-08-27',
-          lessonName: 'Lección 5',
-          teacherId: '679d017daf1fff94edac0c1a',
-          studentsAttendance: [{ studentId: 'abc123', hasAttended: true }],
-          levelId: '679d017daf1fff94edac0c1a',
-          comments: 'Todos asistieron',
-        },
-      ],
+      example: {
+        data: [
+          {
+            _id: '679d017daf1fff94edac0c1a',
+            date: '2025-08-27',
+            lessonName: 'Lección 5',
+            teacherId: '679d017daf1fff94edac0c1a',
+            studentsAttendance: [{ studentId: 'abc123', hasAttended: true }],
+            levelId: '679d017daf1fff94edac0c1a',
+            comments: 'Todos asistieron',
+          },
+        ],
+        metadata: { currentPage: 1, totalPages: 2, totalRecords: 15 },
+      },
     },
   })
   @ApiBadRequestResponse({ description: 'No attendance records found' })
   @ApiParam({ name: 'levelId', required: true, description: 'Level ID' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by lesson name or comments',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page (max 100)',
+  })
   async getAttendanceByLevel(
     @Param('levelId') levelId: string,
+    @Query('search') search?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
     @Auth() user?: JWTPayload,
   ) {
-    return this.attendanceBusiness.getByLevel(levelId, user?.userId);
+    return this.attendanceBusiness.getByLevel(
+      levelId,
+      page,
+      limit,
+      search,
+      user?.userId,
+    );
   }
 
   @UseGuards(AuthGuard, PermissionGuard)
@@ -719,5 +749,60 @@ export class SundaySchoolController {
   @ApiParam({ name: 'id', required: true, description: 'Class ID' })
   async deleteClass(@Param('id') id: string): Promise<GeneralResponse> {
     return this.classBusiness.remove(id);
+  }
+
+  // ------------------- REPORTS -------------------
+
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('sunday-school-reports', 'view_sunday_school_reports')
+  @Get('reports/attendance')
+  @ApiOperation({
+    summary: 'Get Sunday School attendance report',
+    description:
+      'Returns attendance KPIs, comparisons by service and level, and the per-class detail table for the given filters. Only available for Coordinador Escuela Dominical and Administrador.',
+  })
+  @ApiOkResponse({
+    description: 'Attendance report',
+    schema: {
+      example: {
+        summary: {
+          totalAttendees: 1248,
+          averagePerSunday: 178,
+          totalLevels: 6,
+          totalServices: 4,
+        },
+        byService: [
+          { service: 'Domingo 07:00 am', total: 410 },
+          { service: 'Domingo 10:00 am', total: 380 },
+        ],
+        byLevel: [{ levelId: '123', levelName: 'Primarios', total: 310 }],
+        records: [
+          {
+            date: '2026-09-21',
+            service: 'Domingo 07:00 am',
+            levelId: '123',
+            levelName: 'Primarios',
+            teacherId: '456',
+            teacherName: 'Ana Ríos',
+            attendeesCount: 28,
+            students: [
+              {
+                studentId: '789',
+                hasAttended: true,
+                fullName: 'Valentina Pérez',
+              },
+            ],
+          },
+        ],
+        metadata: { currentPage: 1, totalPages: 4, totalRecords: 32 },
+      },
+    },
+  })
+  @ApiBadRequestResponse({ description: 'Invalid filters' })
+  async getAttendanceReport(
+    @Query() query: AttendanceReportQueryDto,
+    @Auth() user?: JWTPayload,
+  ) {
+    return this.reportBusiness.getAttendanceReport(query, user?.churchId);
   }
 }

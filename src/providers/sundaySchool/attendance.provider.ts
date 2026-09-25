@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { FilterQuery, Model } from 'mongoose';
 import {
   SundaySchoolAttendance,
   SundaySchoolAttendanceDocument,
 } from 'src/schemas/sundaySchool/attendance.schema';
 import { RegisterAttendanceDto } from 'src/schemas/sundaySchool/attendance.DTO';
+import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
 
 @Injectable()
 export class SundaySchoolAttendanceProvider {
@@ -14,13 +15,40 @@ export class SundaySchoolAttendanceProvider {
     private readonly attendanceModel: Model<SundaySchoolAttendanceDocument>,
   ) {}
 
-  async getByLevel(levelId: string): Promise<SundaySchoolAttendanceDocument[]> {
-    return this.attendanceModel
-      .find({ levelId })
-      .populate('studentsAttendance.studentId')
-      .populate('teacherId')
-      .sort({ date: -1 })
-      .lean();
+  async getByLevel(
+    levelId: string,
+    page?: number,
+    limit?: number,
+    search?: string,
+  ): Promise<PaginatedResult<SundaySchoolAttendance>> {
+    const { skip } = calculatePagination({ page, limit });
+
+    const filter: FilterQuery<SundaySchoolAttendanceDocument> = { levelId };
+
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      filter.$or = [{ lessonName: regex }, { comments: regex }];
+    }
+
+    const [data, totalRecords] = await Promise.all([
+      this.attendanceModel
+        .find(filter)
+        .populate('studentsAttendance.studentId')
+        .populate('teacherId')
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(limit || 10)
+        .lean(),
+      this.attendanceModel.countDocuments(filter),
+    ]);
+
+    const { page: currentPage, limit: pageSize } = calculatePagination({
+      page,
+      limit,
+    });
+    const totalPages = Math.ceil(totalRecords / pageSize);
+
+    return { data, metadata: { currentPage, totalPages, totalRecords } };
   }
 
   async findByLevelAndDate(

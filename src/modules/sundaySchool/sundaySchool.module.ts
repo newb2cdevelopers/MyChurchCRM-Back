@@ -13,6 +13,7 @@ import {
 } from 'src/schemas/sundaySchool/class.schema';
 import { Members, MemberSchema } from 'src/schemas/member/member.shema';
 import { Users, UserSchema } from 'src/schemas/user/user.schema';
+import { Church, ChurchSchema } from 'src/schemas/churches/church.schema';
 
 import { SundaySchoolController } from 'src/controllers/sundaySchool/sundaySchool.controller';
 
@@ -20,11 +21,14 @@ import { LevelBusiness } from 'src/business/sundaySchool/level.bl';
 import { StudentBusiness } from 'src/business/sundaySchool/student.bl';
 import { AttendanceBusiness } from 'src/business/sundaySchool/attendance.bl';
 import { SundaySchoolClassBusiness } from 'src/business/sundaySchool/class.bl';
+import { SundaySchoolReportBusiness } from 'src/business/sundaySchool/report.bl';
 
 import { LevelProvider } from 'src/providers/sundaySchool/level.provider';
 import { StudentProvider } from 'src/providers/sundaySchool/student.provider';
 import { SundaySchoolAttendanceProvider } from 'src/providers/sundaySchool/attendance.provider';
 import { SundaySchoolClassProvider } from 'src/providers/sundaySchool/class.provider';
+import { SundaySchoolReportProvider } from 'src/providers/sundaySchool/report.provider';
+import { ChurchProvider } from 'src/providers/churches/church.provider';
 
 import { RolePermissionModule } from 'src/modules/role-permission/role-permission.module';
 
@@ -46,6 +50,7 @@ import { RolePermissionModule } from 'src/modules/role-permission/role-permissio
     ]),
     MongooseModule.forFeature([{ name: Members.name, schema: MemberSchema }]),
     MongooseModule.forFeature([{ name: Users.name, schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: Church.name, schema: ChurchSchema }]),
     RolePermissionModule,
   ],
   controllers: [SundaySchoolController],
@@ -54,10 +59,13 @@ import { RolePermissionModule } from 'src/modules/role-permission/role-permissio
     StudentBusiness,
     AttendanceBusiness,
     SundaySchoolClassBusiness,
+    SundaySchoolReportBusiness,
     LevelProvider,
     StudentProvider,
     SundaySchoolAttendanceProvider,
     SundaySchoolClassProvider,
+    SundaySchoolReportProvider,
+    ChurchProvider,
   ],
 })
 export class SundaySchoolModule {}

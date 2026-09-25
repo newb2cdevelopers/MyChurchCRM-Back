@@ -6,8 +6,14 @@ import { SundaySchoolClassBusiness } from 'src/business/sundaySchool/class.bl';
 import { RegisterAttendanceDto } from 'src/schemas/sundaySchool/attendance.DTO';
 import { SundaySchoolAttendance } from 'src/schemas/sundaySchool/attendance.schema';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
+import { PaginatedResult } from 'src/dtos/pagination.dto';
 
 const MAESTRO_ROLE = 'Maestro Escuela Dominical';
+
+const EMPTY_RESULT: PaginatedResult<SundaySchoolAttendance> = {
+  data: [],
+  metadata: { currentPage: 1, totalPages: 0, totalRecords: 0 },
+};
 
 @Injectable()
 export class AttendanceBusiness {
@@ -22,8 +28,11 @@ export class AttendanceBusiness {
 
   async getByLevel(
     levelId: string,
+    page?: number,
+    limit?: number,
+    search?: string,
     userId?: string,
-  ): Promise<SundaySchoolAttendance[]> {
+  ): Promise<PaginatedResult<SundaySchoolAttendance>> {
     if (userId) {
       const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
         userId,
@@ -35,12 +44,12 @@ export class AttendanceBusiness {
         );
 
         if (!teacherLevelIds.includes(levelId)) {
-          return [];
+          return EMPTY_RESULT;
         }
       }
     }
 
-    return this.provider.getByLevel(levelId);
+    return this.provider.getByLevel(levelId, page, limit, search);
   }
 
   async register(

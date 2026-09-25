@@ -12,5 +12,6 @@ export const MODULE_FUNCTIONALITY_ORDER: Record<string, string[]> = {
     '/sunday-school-students',
     '/sunday-school-levels',
     '/sunday-school-classes',
+    '/sunday-school-reports',
   ],
 };
