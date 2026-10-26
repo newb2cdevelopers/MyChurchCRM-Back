@@ -3,6 +3,8 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Delete,
   Param,
   UseGuards,
   ForbiddenException,
@@ -20,10 +22,16 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { PermissionGuard } from 'src/modules/auth/permission.guard';
+import { Permission } from 'src/modules/auth/permission.decorator';
 import { Auth } from 'src/modules/auth/auth.decorator';
 import { JWTPayload } from 'src/schemas/auth/JWTPayload';
 import { WorkfrontBusiness } from 'src/business/workfronts/workfront.bl';
 import { Workfront } from 'src/schemas/workfronts/workfront.schema';
+import {
+  CreateWorkfrontDto,
+  UpdateWorkfrontDto,
+} from 'src/schemas/workfronts/workfront.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { WorkfrontSaveAssignmentDto } from 'src/dtos/workfronts';
 
@@ -156,10 +164,13 @@ export class WorkfrontController {
     );
   }
 
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('settings', 'update_settings')
   @Post()
   @ApiOperation({
     summary: 'Create a new workfront',
-    description: 'Creates a new workfront (ministry front).',
+    description:
+      'Creates a new workfront (ministry front) for the logged user church. Admin only.',
   })
   @ApiCreatedResponse({
     description: 'Workfront created successfully',
@@ -172,9 +183,65 @@ export class WorkfrontController {
       },
     },
   })
-  @ApiBody({ type: Workfront, description: 'Workfront data' })
-  async create(@Body() workfront: Workfront): Promise<Workfront> {
-    return await this.workfrontBusiness.create(workfront);
+  @ApiBody({ type: CreateWorkfrontDto, description: 'Workfront data' })
+  async create(
+    @Body() workfront: CreateWorkfrontDto,
+    @Auth() user: JWTPayload,
+  ): Promise<Workfront> {
+    if (!user.churchId) {
+      throw new ForbiddenException('No tienes acceso a ninguna iglesia');
+    }
+
+    return await this.workfrontBusiness.create({
+      ...workfront,
+      churchId: user.churchId,
+    } as Workfront);
+  }
+
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('settings', 'update_settings')
+  @Put(':id')
+  @ApiOperation({
+    summary: 'Update a workfront',
+    description: 'Updates a workfront (ministry front). Admin only.',
+  })
+  @ApiOkResponse({
+    description: 'Workfront updated',
+    schema: {
+      example: {
+        isSuccessful: true,
+        message: 'Frente de trabajo actualizado correctamente',
+      },
+    },
+  })
+  @ApiParam({ name: 'id', required: true, description: 'Workfront ID' })
+  async update(
+    @Param('id') id: string,
+    @Body() body: UpdateWorkfrontDto,
+  ): Promise<GeneralResponse> {
+    return await this.workfrontBusiness.update(id, body);
+  }
+
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('settings', 'update_settings')
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Delete a workfront',
+    description:
+      'Deletes a workfront (ministry front) and unassigns its users. Admin only.',
+  })
+  @ApiOkResponse({
+    description: 'Workfront deleted',
+    schema: {
+      example: {
+        isSuccessful: true,
+        message: 'Frente de trabajo eliminado correctamente',
+      },
+    },
+  })
+  @ApiParam({ name: 'id', required: true, description: 'Workfront ID' })
+  async remove(@Param('id') id: string): Promise<GeneralResponse> {
+    return await this.workfrontBusiness.remove(id);
   }
 
   @UseGuards(AuthGuard)

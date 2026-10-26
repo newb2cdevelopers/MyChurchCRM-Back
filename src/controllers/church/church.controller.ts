@@ -6,6 +6,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { PermissionGuard } from 'src/modules/auth/permission.guard';
+import { Permission } from 'src/modules/auth/permission.decorator';
 import { ChurchBusiness } from 'src/business/church/church.bl';
 import { Church } from 'src/schemas/churches/church.schema';
 import {
@@ -61,13 +63,14 @@ export class ChurchController {
     return this.churchBusiness.getById(id);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('settings', 'update_settings')
   @ApiBearerAuth()
   @Put(':id/services')
   @ApiOperation({
     summary: 'Update church services',
     description:
-      'Replaces the list of services (day + time) of a church. Requires authentication.',
+      'Replaces the list of services (day + time) of a church. Admin only.',
   })
   @ApiOkResponse({
     description: 'Services updated',
@@ -85,13 +88,14 @@ export class ChurchController {
     return this.churchBusiness.updateServices(id, body.services || []);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermissionGuard)
+  @Permission('settings', 'update_settings')
   @ApiBearerAuth()
   @Put(':id/family-group-types')
   @ApiOperation({
     summary: 'Update church family group types',
     description:
-      'Replaces the list of family group types of a church. Requires authentication.',
+      'Replaces the list of family group types of a church. Admin only.',
   })
   @ApiOkResponse({
     description: 'Family group types updated',

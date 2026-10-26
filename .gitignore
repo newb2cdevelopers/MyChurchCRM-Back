@@ -38,3 +38,6 @@ package-lock.json
 
 # Ignorar el archivo .env
 .env
+
+# Ignorar credenciales de producción
+.env.prod

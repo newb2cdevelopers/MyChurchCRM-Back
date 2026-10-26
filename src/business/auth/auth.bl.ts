@@ -259,6 +259,8 @@ export class AuthBusiness {
       access_token,
       refresh_token: refreshToken,
       email: user.email,
+      name: user.name,
+      lastName: user.lastName,
       churchId: user.churchId,
       churchName,
       roles: this.generateDashboardInfo(
@@ -349,6 +351,8 @@ export class AuthBusiness {
     return {
       access_token,
       email: user.email,
+      name: user.name,
+      lastName: user.lastName,
       churchId: user.churchId,
       churchName,
       roles: this.generateDashboardInfo(

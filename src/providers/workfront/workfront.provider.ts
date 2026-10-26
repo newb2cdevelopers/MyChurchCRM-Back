@@ -25,6 +25,10 @@ export class WorkfrontProvider {
     return this.workfrontModel.find();
   }
 
+  async getById(workfrontId: string) {
+    return this.workfrontModel.findById(workfrontId);
+  }
+
   async getAllWorkfrontsByChurch(churchId: string) {
     return this.workfrontModel.find({ churchId });
   }
@@ -35,6 +39,25 @@ export class WorkfrontProvider {
 
   async create(workfront: Workfront) {
     return this.workfrontModel.create(workfront);
+  }
+
+  async updateWorkfront(workfrontId: string, data: Partial<Workfront>) {
+    return this.workfrontModel.findByIdAndUpdate(
+      workfrontId,
+      { $set: data },
+      { new: true },
+    );
+  }
+
+  async deleteWorkfront(workfrontId: string) {
+    return this.workfrontModel.findByIdAndDelete(workfrontId);
+  }
+
+  async unassignUsersFromWorkfront(workfrontId: string) {
+    return this.usertModel.updateMany(
+      { workfront: workfrontId },
+      { $unset: { workfront: '' } },
+    );
   }
 
   async saveAssignment(

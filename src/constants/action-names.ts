@@ -18,6 +18,8 @@ export const ACTION_NAMES = {
   DELETE_CLASS: 'delete_class',
   PROMOTE_STUDENTS: 'promote_students',
   VIEW_SUNDAY_SCHOOL_REPORTS: 'view_sunday_school_reports',
+  // Settings
+  UPDATE_SETTINGS: 'update_settings',
 } as const;
 
 export type ActionName = (typeof ACTION_NAMES)[keyof typeof ACTION_NAMES];
