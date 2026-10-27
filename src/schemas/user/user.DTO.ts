@@ -10,7 +10,7 @@ import {
   MinLength,
   Matches,
 } from 'class-validator';
-import { PartialType } from '@nestjs/mapped-types';
+import { OmitType, PartialType } from '@nestjs/mapped-types';
 import { DOCUMENT_TYPES } from '../../constants/document-types';
 
 export class userEmailDTO {
@@ -64,7 +64,9 @@ export class UserDTO extends userEmailDTO {
   documentNumber: string;
 }
 
-export class UpdateUserDTO extends PartialType(UserDTO) {
+export class UpdateUserDTO extends PartialType(
+  OmitType(UserDTO, ['password']),
+) {
   @ApiProperty({
     type: Boolean,
     required: false,

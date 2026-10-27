@@ -149,6 +149,22 @@ export class MemberProvider {
       }
 
       if (statusData.status === 'active') {
+        // Check if the member is already active in another church
+        const activeInOtherChurch = await this.memberModel.findOne({
+          _id: { $ne: memberId },
+          documentNumber: existingMember.documentNumber,
+          churchId: { $ne: existingMember.churchId },
+          status: 'active',
+        });
+
+        if (activeInOtherChurch) {
+          response.isSuccessful = false;
+          response.message =
+            'El miembro ya se encuentra activo en otra iglesia';
+
+          return response;
+        }
+
         await this.memberModel.updateOne(
           { _id: memberId },
           {

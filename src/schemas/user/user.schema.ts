@@ -63,6 +63,16 @@ export const UserSchema = SchemaFactory.createForClass(Users);
 UserSchema.index({ email: 1 });
 UserSchema.index({ churchId: 1, createdAt: -1 });
 
+UserSchema.pre('save', function (next: (err?: Error) => void) {
+  const user = this as UserDocument;
+
+  if (user.email && typeof user.email === 'string') {
+    user.email = user.email.toLowerCase().trim();
+  }
+
+  return next();
+});
+
 UserSchema.pre('save', async function (next: (err?: Error) => void) {
   const user = this as UserDocument;
 
