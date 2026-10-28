@@ -9,6 +9,13 @@ export class Users {
   @Prop({
     required: false,
     type: mongoose.Schema.Types.ObjectId,
+    ref: 'Person',
+  })
+  personId?: mongoose.Types.ObjectId;
+
+  @Prop({
+    required: false,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Workfront',
   })
   workfront: string;
@@ -62,6 +69,14 @@ export const UserSchema = SchemaFactory.createForClass(Users);
 
 UserSchema.index({ email: 1 });
 UserSchema.index({ churchId: 1, createdAt: -1 });
+UserSchema.index(
+  { personId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { personId: { $exists: true } },
+    name: 'users_person_unique',
+  },
+);
 
 UserSchema.pre('save', function (next: (err?: Error) => void) {
   const user = this as UserDocument;

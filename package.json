@@ -22,7 +22,8 @@
     "start:azure": "npm run build && func host start",
     "migrate:users": "ts-node scripts/backfill-user-documents.ts",
     "seed:modules-permissions": "ts-node scripts/seed-modules-permissions.ts",
-    "migrate:member-status": "ts-node scripts/migrate-member-status-index.ts"
+    "migrate:member-status": "ts-node scripts/migrate-member-status-index.ts",
+    "migrate:persons": "ts-node scripts/backfill-persons.ts"
   },
   "dependencies": {
     "@azure/functions": "^1.0.3",

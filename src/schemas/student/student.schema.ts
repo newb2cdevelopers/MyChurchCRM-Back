@@ -5,6 +5,13 @@ import * as mongoose from 'mongoose';
 export class Students {
   _id: number;
 
+  @Prop({
+    required: false,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Person',
+  })
+  personId?: mongoose.Types.ObjectId;
+
   @Prop({ required: true })
   name: string;
 
@@ -56,4 +63,12 @@ export type StudentDocument = Students & mongoose.Document;
 export const StudentSchema = SchemaFactory.createForClass(Students);
 
 StudentSchema.index({ documentNumber: 1, churchId: 1 }, { unique: true });
+StudentSchema.index(
+  { personId: 1, churchId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { personId: { $exists: true } },
+    name: 'students_person_church_unique',
+  },
+);
 StudentSchema.index({ churchId: 1, levelId: 1, createdAt: -1 });

@@ -121,6 +121,13 @@ const RelativeSchema = SchemaFactory.createForClass(Relative);
 export class Members {
   _id: number;
 
+  @Prop({
+    required: false,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Person',
+  })
+  personId?: mongoose.Types.ObjectId;
+
   @Prop({ required: true })
   documentNumber: string;
 
@@ -207,3 +214,19 @@ export const MemberSchema = SchemaFactory.createForClass(Members);
 MemberSchema.index({ churchId: 1, createdAt: -1 });
 MemberSchema.index({ churchId: 1, workfront: 1 });
 MemberSchema.index({ documentNumber: 1, churchId: 1 }, { unique: true });
+MemberSchema.index(
+  { personId: 1, churchId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { personId: { $exists: true } },
+    name: 'members_person_church_unique',
+  },
+);
+MemberSchema.index(
+  { personId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { personId: { $exists: true }, status: 'active' },
+    name: 'members_one_active_person',
+  },
+);

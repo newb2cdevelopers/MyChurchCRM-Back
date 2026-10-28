@@ -31,6 +31,7 @@ import { LocalityModule } from './modules/locality/locality.module';
 import { NeighborhoodModule } from './modules/neighborhood/neighborhood.module';
 import { CompanyCategoryModule } from './modules/companyCategory/companyCategory.module';
 import { CompanyDirectoryModule } from './modules/companyDirectory/companyDirectory.module';
+import { PersonModule } from './modules/person/person.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { CompanyDirectoryModule } from './modules/companyDirectory/companyDirect
     NeighborhoodModule,
     CompanyCategoryModule,
     CompanyDirectoryModule,
+    PersonModule,
     FunctionalityModule,
     ModuleLocalModule,
     WorkfrontModule,
