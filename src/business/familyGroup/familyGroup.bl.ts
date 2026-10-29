@@ -25,7 +25,7 @@ export class FamilyGroupBusiness {
     let scopeFilter;
 
     if (userId) {
-      const { roleNames, zoneId, memberId } =
+      const { roleNames, zoneId, leaderMemberId } =
         await this.provider.getUserScopeInfo(userId);
 
       if (roleNames.includes('Coordinador Grupos Familiares') && zoneId) {
@@ -34,8 +34,11 @@ export class FamilyGroupBusiness {
         );
 
         scopeFilter = { neighborhood: { $in: neighborhoodIds } };
-      } else if (roleNames.includes('Líder Grupos Familiares') && memberId) {
-        scopeFilter = { leader: memberId };
+      } else if (
+        roleNames.includes('Líder Grupos Familiares') &&
+        leaderMemberId
+      ) {
+        scopeFilter = { leader: leaderMemberId };
       }
     }
 

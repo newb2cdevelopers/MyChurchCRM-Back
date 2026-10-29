@@ -25,12 +25,13 @@ export class LevelBusiness {
     let scopeFilter: FilterQuery<LevelDocument> | undefined;
 
     if (userId) {
-      const { roleNames, memberId } = await this.provider.getUserScopeInfo(
-        userId,
-      );
+      const { roleNames, teacherMemberId } =
+        await this.provider.getUserScopeInfo(userId);
 
-      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
-        scopeFilter = { teachers: memberId };
+      if (roleNames.includes(MAESTRO_ROLE) && !teacherMemberId) {
+        scopeFilter = { teachers: { $in: [] } };
+      } else if (roleNames.includes(MAESTRO_ROLE)) {
+        scopeFilter = { teachers: teacherMemberId };
       }
     }
 
@@ -45,13 +46,16 @@ export class LevelBusiness {
 
   async getById(id: string, userId?: string): Promise<Level | null> {
     if (userId) {
-      const { roleNames, memberId } = await this.provider.getUserScopeInfo(
-        userId,
-      );
+      const { roleNames, teacherMemberId } =
+        await this.provider.getUserScopeInfo(userId);
 
-      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+      if (roleNames.includes(MAESTRO_ROLE) && !teacherMemberId) {
+        return null;
+      }
+
+      if (roleNames.includes(MAESTRO_ROLE)) {
         const teacherLevelIds = await this.provider.getLevelIdsByTeacher(
-          memberId,
+          teacherMemberId,
         );
 
         if (!teacherLevelIds.includes(id)) {

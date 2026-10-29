@@ -34,13 +34,16 @@ export class AttendanceBusiness {
     userId?: string,
   ): Promise<PaginatedResult<SundaySchoolAttendance>> {
     if (userId) {
-      const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
-        userId,
-      );
+      const { roleNames, teacherMemberId } =
+        await this.levelProvider.getUserScopeInfo(userId);
 
-      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+      if (roleNames.includes(MAESTRO_ROLE)) {
+        if (!teacherMemberId) {
+          return EMPTY_RESULT;
+        }
+
         const teacherLevelIds = await this.levelProvider.getLevelIdsByTeacher(
-          memberId,
+          teacherMemberId,
         );
 
         if (!teacherLevelIds.includes(levelId)) {
@@ -60,13 +63,18 @@ export class AttendanceBusiness {
     const response: GeneralResponse = { isSuccessful: false };
 
     if (userId) {
-      const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
-        userId,
-      );
+      const { roleNames, teacherMemberId } =
+        await this.levelProvider.getUserScopeInfo(userId);
 
-      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+      if (roleNames.includes(MAESTRO_ROLE)) {
+        if (!teacherMemberId) {
+          response.message =
+            'No tienes una membresía activa para acceder a Escuela Dominical';
+          return response;
+        }
+
         const teacherLevelIds = await this.levelProvider.getLevelIdsByTeacher(
-          memberId,
+          teacherMemberId,
         );
 
         // The logged-in teacher can only register attendance for their own

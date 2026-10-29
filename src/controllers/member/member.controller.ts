@@ -125,8 +125,11 @@ export class MemberController {
   })
   @ApiNotFoundResponse({ description: 'Member not found' })
   @ApiParam({ name: 'id', required: true, description: 'Member MongoDB ID' })
-  async getMemberById(@Param('id') id: string): Promise<Members> {
-    const result = await this.memberBusiness.getMemberById(id);
+  async getMemberById(
+    @Auth() user: JWTPayload,
+    @Param('id') id: string,
+  ): Promise<Members> {
+    const result = await this.memberBusiness.getMemberById(id, user.churchId);
 
     if (!result) throw new NotFoundException('Member not found');
 
@@ -153,10 +156,15 @@ export class MemberController {
   @ApiParam({ name: 'id', required: true, description: 'Member MongoDB ID' })
   @ApiBody({ type: ChangeMemberStatusDto })
   async changeStatus(
+    @Auth() user: JWTPayload,
     @Param('id') id: string,
     @Body() statusData: ChangeMemberStatusDto,
   ): Promise<GeneralResponse> {
-    return await this.memberBusiness.changeStatus(id, statusData);
+    return await this.memberBusiness.changeStatus(
+      id,
+      statusData,
+      user.churchId,
+    );
   }
 
   @UseGuards(AuthGuard)
@@ -186,8 +194,14 @@ export class MemberController {
     },
   })
   @ApiBody({ type: MemberGeneralInfoDto })
-  async Create(@Body() member: MemberGeneralInfoDto): Promise<GeneralResponse> {
-    return await this.memberBusiness.create(member);
+  async Create(
+    @Auth() user: JWTPayload,
+    @Body() member: MemberGeneralInfoDto,
+  ): Promise<GeneralResponse> {
+    return await this.memberBusiness.create({
+      ...member,
+      churchId: user.churchId,
+    });
   }
 
   @UseGuards(AuthGuard)

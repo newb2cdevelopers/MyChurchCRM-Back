@@ -45,13 +45,16 @@ export class StudentBusiness {
     }
 
     if (userId) {
-      const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
-        userId,
-      );
+      const { roleNames, teacherMemberId } =
+        await this.levelProvider.getUserScopeInfo(userId);
 
-      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+      if (roleNames.includes(MAESTRO_ROLE)) {
+        if (!teacherMemberId) {
+          return EMPTY_RESULT;
+        }
+
         const teacherLevelIds = await this.levelProvider.getLevelIdsByTeacher(
-          memberId,
+          teacherMemberId,
         );
 
         if (levelId && !teacherLevelIds.includes(levelId)) {
@@ -77,13 +80,16 @@ export class StudentBusiness {
     }
 
     if (userId) {
-      const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
-        userId,
-      );
+      const { roleNames, teacherMemberId } =
+        await this.levelProvider.getUserScopeInfo(userId);
 
-      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+      if (roleNames.includes(MAESTRO_ROLE)) {
+        if (!teacherMemberId) {
+          return null;
+        }
+
         const teacherLevelIds = await this.levelProvider.getLevelIdsByTeacher(
-          memberId,
+          teacherMemberId,
         );
 
         if (!teacherLevelIds.includes(student.levelId.toString())) {
@@ -211,13 +217,16 @@ export class StudentBusiness {
     const churchId = level.churchId.toString();
 
     if (userId) {
-      const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
-        userId,
-      );
+      const { roleNames, teacherMemberId } =
+        await this.levelProvider.getUserScopeInfo(userId);
 
-      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+      if (roleNames.includes(MAESTRO_ROLE)) {
+        if (!teacherMemberId) {
+          return null;
+        }
+
         const teacherLevelIds = await this.levelProvider.getLevelIdsByTeacher(
-          memberId,
+          teacherMemberId,
         );
 
         if (!teacherLevelIds.includes(levelId)) {
@@ -266,13 +275,18 @@ export class StudentBusiness {
     }
 
     if (userId) {
-      const { roleNames, memberId } = await this.levelProvider.getUserScopeInfo(
-        userId,
-      );
+      const { roleNames, teacherMemberId } =
+        await this.levelProvider.getUserScopeInfo(userId);
 
-      if (roleNames.includes(MAESTRO_ROLE) && memberId) {
+      if (roleNames.includes(MAESTRO_ROLE)) {
+        if (!teacherMemberId) {
+          response.message =
+            'No tienes una membresía activa para acceder a Escuela Dominical';
+          return response;
+        }
+
         const teacherLevelIds = await this.levelProvider.getLevelIdsByTeacher(
-          memberId,
+          teacherMemberId,
         );
 
         if (!teacherLevelIds.includes(levelId)) {

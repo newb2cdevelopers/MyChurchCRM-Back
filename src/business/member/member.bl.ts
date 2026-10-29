@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { Members } from 'src/schemas/member/member.shema';
 import { MemberProvider } from 'src/providers/members/member.provider';
 import {
@@ -11,19 +11,27 @@ import {
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
+import { PersonProvider } from 'src/providers/person/person.provider';
 
 @Injectable()
 export class MemberBusiness {
-  constructor(private readonly provider: MemberProvider) {}
+  constructor(
+    private readonly provider: MemberProvider,
+    private readonly personProvider: PersonProvider,
+  ) {}
 
   async getAllMembers(
-    churchId?: string,
+    churchId: string,
     workfrontId?: string,
     search?: string,
     status?: string,
     page?: number,
     limit?: number,
   ): Promise<PaginatedResult<Members>> {
+    if (!churchId) {
+      throw new ConflictException('churchId is required');
+    }
+
     return this.provider.getAllMembers(
       churchId,
       workfrontId,
@@ -34,30 +42,45 @@ export class MemberBusiness {
     ) as unknown as Promise<PaginatedResult<Members>>;
   }
 
-  async getMemberById(id: string): Promise<Members> {
-    return await this.provider.getMemberById(id);
+  async getMemberById(id: string, churchId: string): Promise<Members | null> {
+    if (!churchId) {
+      throw new ConflictException('churchId is required');
+    }
+    return await this.provider.getMemberById(id, churchId);
   }
 
   async changeStatus(
     memberId: string,
     statusData: ChangeMemberStatusDto,
+    churchId: string,
   ): Promise<GeneralResponse> {
-    return this.provider.changeStatus(memberId, statusData);
+    if (!churchId) {
+      throw new ConflictException('churchId is required');
+    }
+    return this.provider.changeStatus(memberId, statusData, churchId);
   }
 
   async create(member: MemberGeneralInfoDto): Promise<GeneralResponse> {
-    const response = await this.provider.create(member);
-
-    // If the member creation is successful and a user is returned, link the user to the member
-    if (response.isSuccessful && response.data) {
-      await this.provider.linkUserByDocument(
-        member.documentType,
-        member.documentNumber,
-        member.churchId,
-        String(response.data._id),
-      );
+    if (!member.churchId) {
+      throw new ConflictException('churchId is required');
     }
-    return response;
+
+    const person = await this.personProvider.resolveOrCreate({
+      documentType: member.documentType,
+      documentNumber: member.documentNumber,
+      firstName: (member as { firstName?: string }).firstName || '',
+      secondName: (member as { secondName?: string }).secondName || '',
+      firstLastName: (member as { firstLastName?: string }).firstLastName || '',
+      secondLastName:
+        (member as { secondLastName?: string }).secondLastName || '',
+      email: member.email,
+      birthDate: (member as { birthDate?: string }).birthDate,
+      mobilePhone: (member as { mobilePhone?: string }).mobilePhone,
+      address: (member as { address?: string }).address,
+      createdByChurchId: member.churchId,
+    });
+
+    return this.provider.create(member, String(person._id));
   }
 
   async updateGeneralMemberInfo(

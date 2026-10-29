@@ -5,11 +5,13 @@ import { UserController } from 'src/controllers/user/user.controller';
 import { UserBusiness } from 'src/business/user/user.bl';
 import { UserProvider } from 'src/providers/user/user.provider';
 import { MemberModule } from '../member/member.module';
+import { PersonModule } from '../person/person.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Users.name, schema: UserSchema }]),
     MemberModule,
+    PersonModule,
   ],
   controllers: [UserController],
   providers: [UserBusiness, UserProvider],

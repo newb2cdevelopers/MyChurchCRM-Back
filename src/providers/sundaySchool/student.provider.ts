@@ -72,6 +72,7 @@ export class StudentProvider {
     return this.studentModel.findById(id).populate('levelId').lean();
   }
 
+  // Search limited by church. Unlike members.findByDocument, here it is filtered by churchId to respect the uniqueness { documentNumber, churchId } in the students collection and maintain isolation between churches.
   async findByDocument(
     documentNumber: string,
     churchId: string,

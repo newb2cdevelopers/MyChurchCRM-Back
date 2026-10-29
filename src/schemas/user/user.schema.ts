@@ -54,11 +54,39 @@ export class Users {
   documentNumber: string;
 
   @Prop({
-    required: false,
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Members',
+    required: true,
+    enum: ['pending', 'active', 'rejected'],
+    default: 'pending',
   })
-  memberId: string;
+  status: 'pending' | 'active' | 'rejected';
+
+  @Prop({
+    type: {
+      firstName: { type: String },
+      secondName: { type: String },
+      firstLastName: { type: String },
+      secondLastName: { type: String },
+      email: { type: String },
+      documentType: { type: String },
+      documentNumber: { type: String },
+    },
+    required: false,
+  })
+  registrationSnapshot?: {
+    firstName?: string;
+    secondName?: string;
+    firstLastName?: string;
+    secondLastName?: string;
+    email?: string;
+    documentType?: string;
+    documentNumber?: string;
+  };
+
+  @Prop({ type: Date, required: false })
+  rejectedAt?: Date;
+
+  @Prop({ required: false })
+  rejectedReason?: string;
 
   comparePassword: (candidatePassword: string) => boolean;
 }

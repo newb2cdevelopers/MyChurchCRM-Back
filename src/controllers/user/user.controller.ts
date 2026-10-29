@@ -136,4 +136,48 @@ export class UserController {
   async deleteUser(@Param('id') id: string): Promise<void> {
     return await this.userBl.deleteUser(id);
   }
+
+  @Get(':id/activation-preview')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Get activation preview for pending registration',
+    description:
+      'Returns user, canonical person and registration snapshot with conflict alerts for admin review.',
+  })
+  async getActivationPreview(
+    @Auth() user: JWTPayload,
+    @Param('id') id: string,
+  ) {
+    return await this.userBl.getActivationPreview(id, user.churchId);
+  }
+
+  @Post(':id/activate')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Activate or reject pending registration',
+    description:
+      "Actions: 'confirm_same' (activate as is), 'update_person' (update canonical person then activate), 'reject' (reject registration).",
+  })
+  async activateRegistration(
+    @Auth() user: JWTPayload,
+    @Param('id') id: string,
+    @Body()
+    body: {
+      action: 'confirm_same' | 'update_person' | 'reject';
+      personData?: Record<string, unknown>;
+      rejectReason?: string;
+    },
+  ) {
+    return await this.userBl.activateRegistration(
+      id,
+      user.churchId,
+      body.action,
+      {
+        personData: body.personData,
+        rejectReason: body.rejectReason,
+      },
+    );
+  }
 }

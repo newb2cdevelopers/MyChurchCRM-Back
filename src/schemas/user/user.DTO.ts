@@ -86,11 +86,6 @@ export class UpdateUserDTO extends PartialType(
   @IsString()
   zoneId?: string;
 
-  @ApiProperty({ type: String, required: false, description: 'Member ID' })
-  @IsOptional()
-  @IsString()
-  memberId?: string;
-
   @ApiProperty({ type: String, required: false, description: 'Workfront ID' })
   @IsOptional()
   @IsString()

@@ -5,11 +5,13 @@ import { Level, LevelDocument } from 'src/schemas/level/level.schema';
 import { CreateLevelDto, UpdateLevelDto } from 'src/schemas/level/level.DTO';
 import { Students, StudentDocument } from 'src/schemas/student/student.schema';
 import { Users, UserDocument } from 'src/schemas/user/user.schema';
+import { Members, MemberDocument } from 'src/schemas/member/member.shema';
 import { TtlCache } from 'src/utilities/ttl-cache';
 
 export interface UserScopeInfo {
   roleNames: string[];
-  memberId?: string;
+  personId?: string;
+  teacherMemberId?: string;
 }
 
 @Injectable()
@@ -25,6 +27,8 @@ export class LevelProvider {
     private readonly studentModel: Model<StudentDocument>,
     @InjectModel(Users.name)
     private readonly userModel: Model<UserDocument>,
+    @InjectModel(Members.name)
+    private readonly memberModel: Model<MemberDocument>,
   ) {}
 
   async create(
@@ -44,7 +48,7 @@ export class LevelProvider {
     const user = await this.userModel
       .findById(userId)
       .populate({ path: 'roles', model: 'Role', select: 'name' })
-      .select('memberId roles')
+      .select('personId roles churchId')
       .lean();
 
     if (!user) {
@@ -54,18 +58,33 @@ export class LevelProvider {
     }
 
     const roles = user.roles as unknown as { name: string }[];
+    const personId = (user as { personId?: unknown }).personId?.toString();
+
+    let teacherMemberId: string | undefined;
+
+    if (personId && user.churchId) {
+      const member = await this.memberModel
+        .findOne({ personId, churchId: user.churchId, status: 'active' })
+        .select('_id')
+        .lean();
+
+      if (member) {
+        teacherMemberId = member._id.toString();
+      }
+    }
 
     const result = {
       roleNames: roles?.map((r) => r.name) || [],
-      memberId: user.memberId?.toString(),
+      personId,
+      teacherMemberId,
     };
 
     this.userScopeCache.set(cacheKey, result);
     return result;
   }
 
-  async getLevelIdsByTeacher(memberId: string): Promise<string[]> {
-    const cacheKey = `teacher-levels:${memberId}`;
+  async getLevelIdsByTeacher(teacherMemberId: string): Promise<string[]> {
+    const cacheKey = `teacher-levels:${teacherMemberId}`;
     const cached = this.teacherLevelsCache.get(cacheKey);
 
     if (cached) {
@@ -73,7 +92,7 @@ export class LevelProvider {
     }
 
     const levels = await this.levelModel
-      .find({ teachers: memberId })
+      .find({ teachers: teacherMemberId })
       .select('_id')
       .lean();
 

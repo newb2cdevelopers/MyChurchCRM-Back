@@ -38,7 +38,8 @@ export class FamilyGroupProvider {
   private readonly userScopeCache = new TtlCache<{
     roleNames: string[];
     zoneId?: string;
-    memberId?: string;
+    personId?: string;
+    leaderMemberId?: string;
   }>(USER_SCOPE_CACHE_TTL_MS);
 
   constructor(
@@ -91,20 +92,36 @@ export class FamilyGroupProvider {
     const user = await this.userGroupModel
       .findById(userId)
       .populate({ path: 'roles', model: 'Role', select: 'name' })
-      .select('zoneId memberId roles')
+      .select('zoneId personId roles churchId')
       .lean();
 
     const result = {
       roleNames: [] as string[],
       zoneId: undefined as string | undefined,
-      memberId: undefined as string | undefined,
+      personId: undefined as string | undefined,
+      leaderMemberId: undefined as string | undefined,
     };
 
     if (user) {
       const roles = user.roles as unknown as { name: string }[];
       result.roleNames = roles?.map((r) => r.name) || [];
-      result.zoneId = user.zoneId?.toString();
-      result.memberId = user.memberId?.toString();
+      result.zoneId = (user as { zoneId?: unknown }).zoneId?.toString();
+
+      const personIdValue = (user as { personId?: unknown }).personId;
+      const personIdStr = personIdValue ? personIdValue.toString() : undefined;
+      result.personId = personIdStr;
+
+      if (personIdStr && (user as { churchId?: unknown }).churchId) {
+        const member = await this.memberModel
+          .findOne({
+            personId: personIdStr,
+            churchId: (user as { churchId: string }).churchId,
+            status: 'active',
+          })
+          .select('_id')
+          .lean();
+        result.leaderMemberId = member?._id.toString();
+      }
     }
 
     this.userScopeCache.set(cacheKey, result);

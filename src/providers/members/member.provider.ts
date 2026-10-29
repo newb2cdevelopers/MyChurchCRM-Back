@@ -24,34 +24,40 @@ export class MemberProvider {
   ) {}
 
   async getAllMembers(
-    churchId?: string,
+    churchId: string,
     workfrontId?: string,
     search?: string,
     status?: string,
     page?: number,
     limit?: number,
   ): Promise<PaginatedResult<Members>> {
+    if (!churchId) {
+      throw new Error('churchId is required');
+    }
+
     const { skip } = calculatePagination({ page, limit });
 
     const filter: FilterQuery<MemberDocument> = {};
-    if (churchId) {
-      filter.churchId = churchId;
-    }
+    filter.churchId = churchId;
+
     if (workfrontId) {
       filter.workfront = workfrontId;
     }
+
     if (status) {
       filter.status = status;
     }
 
     if (search) {
       const regex = new RegExp(search, 'i');
+
       filter.$or = [{ fullName: regex }, { documentNumber: regex }];
     }
 
     const baseQuery = this.memberModel
       .find(filter)
       .sort({ createdAt: -1 })
+      .populate('personId')
       .lean();
 
     const populatedQuery = churchId
@@ -82,65 +88,74 @@ export class MemberProvider {
       .lean();
   }
 
-  async findByDocuments(
-    documents: { documentType: string; documentNumber: string }[],
-  ): Promise<Pick<Members, 'documentType' | 'documentNumber'>[]> {
-    const orConditions = documents
-      .filter((d) => d.documentType && d.documentNumber)
-      .map((d) => ({
-        documentType: d.documentType,
-        documentNumber: d.documentNumber,
-      }));
+  // This method retrieves the personIds of members that match the provided personIds and optional churchId.
+  async findMemberPersonIds(
+    personIds: string[],
+    churchId?: string,
+  ): Promise<string[]> {
+    if (!personIds.length) return [];
 
-    if (orConditions.length === 0) {
-      return [];
+    const filter: FilterQuery<MemberDocument> = {
+      personId: { $in: personIds },
+    };
+
+    if (churchId) {
+      filter.churchId = churchId;
+    }
+
+    const members = await this.memberModel
+      .find(filter)
+      .select('personId')
+      .lean();
+
+    return members
+      .map((member) => String((member as { personId?: unknown }).personId))
+      .filter((personId) => personId && personId !== 'undefined');
+  }
+
+  // Search for active membership for a person (without filtering by church).
+  // Used to validate the rule: "one active church".
+  async findActiveMemberByPersonId(personId: string) {
+    if (!personId) return null;
+    return this.memberModel.findOne({ personId, status: 'active' }).lean();
+  }
+
+  async getMemberById(id: string, churchId?: string): Promise<Members | null> {
+    const filter: FilterQuery<MemberDocument> = { _id: id };
+    if (churchId) {
+      filter.churchId = churchId;
     }
 
     return await this.memberModel
-      .find({ $or: orConditions })
-      .select('documentType documentNumber')
-      .lean();
-  }
-
-  async findByDocument(
-    documentType: string,
-    documentNumber: string,
-  ): Promise<Members> {
-    return await this.memberModel.findOne({ documentType, documentNumber });
-  }
-
-  async linkUserByDocument(
-    documentType: string,
-    documentNumber: string,
-    churchId: string,
-    memberId: string,
-  ): Promise<void> {
-    await this.userModel.updateOne(
-      { documentType, documentNumber, churchId },
-      { memberId },
-    );
-  }
-
-  async getMemberById(id: string): Promise<Members> {
-    return await this.memberModel
-      .findById(id)
+      .findOne(filter)
       .populate({
         path: 'workfront',
         model: 'Workfront',
       })
+      .populate('personId')
       .lean();
   }
 
   async changeStatus(
     memberId: string,
     statusData: ChangeMemberStatusDto,
+    churchId: string,
   ): Promise<GeneralResponse> {
     const response: GeneralResponse = { isSuccessful: true };
 
     try {
-      const existingMember = await this.memberModel.findOne({
-        _id: memberId,
-      });
+      if (!churchId) {
+        response.isSuccessful = false;
+        response.message = 'churchId is required';
+        return response;
+      }
+
+      const filterExisting: FilterQuery<MemberDocument> = { _id: memberId };
+      if (churchId) {
+        filterExisting.churchId = churchId;
+      }
+
+      const existingMember = await this.memberModel.findOne(filterExisting);
 
       if (!existingMember) {
         response.isSuccessful = false;
@@ -148,14 +163,27 @@ export class MemberProvider {
         return response;
       }
 
+      const personId = (existingMember as { personId?: unknown }).personId;
+
+      if (!personId) {
+        response.isSuccessful = false;
+        response.message =
+          'No es posible validar el cambio de estado sin personId.';
+        return response;
+      }
+
       if (statusData.status === 'active') {
-        // Check if the member is already active in another church
-        const activeInOtherChurch = await this.memberModel.findOne({
+        // Check if the member is already active in another church (by personId)
+        const filterActiveOther: FilterQuery<MemberDocument> = {
           _id: { $ne: memberId },
-          documentNumber: existingMember.documentNumber,
           churchId: { $ne: existingMember.churchId },
           status: 'active',
-        });
+          personId,
+        };
+
+        const activeInOtherChurch = await this.memberModel.findOne(
+          filterActiveOther,
+        );
 
         if (activeInOtherChurch) {
           response.isSuccessful = false;
@@ -176,12 +204,16 @@ export class MemberProvider {
           },
         );
       } else {
-        const activeInOtherChurch = await this.memberModel.findOne({
+        const filterActiveOther: FilterQuery<MemberDocument> = {
           _id: { $ne: memberId },
-          documentNumber: existingMember.documentNumber,
           churchId: { $ne: existingMember.churchId },
           status: 'active',
-        });
+          personId,
+        };
+
+        const activeInOtherChurch = await this.memberModel.findOne(
+          filterActiveOther,
+        );
 
         if (activeInOtherChurch) {
           response.isSuccessful = false;
@@ -203,7 +235,7 @@ export class MemberProvider {
       }
 
       response.data = await this.memberModel
-        .findOne({ _id: memberId })
+        .findOne({ _id: memberId, churchId })
         .populate({ path: 'workfront', model: 'Workfront' });
 
       return response;
@@ -219,12 +251,15 @@ export class MemberProvider {
     }
   }
 
-  async create(member: MemberGeneralInfoDto): Promise<GeneralResponse> {
+  async create(
+    member: MemberGeneralInfoDto,
+    personId: string,
+  ): Promise<GeneralResponse> {
     const response: GeneralResponse = { isSuccessful: true };
 
     try {
       const existingInChurch = await this.memberModel.findOne({
-        documentNumber: member.documentNumber,
+        personId,
         churchId: member.churchId,
       });
 
@@ -242,7 +277,7 @@ export class MemberProvider {
       }
 
       const activeInOtherChurch = await this.memberModel.findOne({
-        documentNumber: member.documentNumber,
+        personId,
         churchId: { $ne: member.churchId },
         status: 'active',
       });
@@ -253,7 +288,10 @@ export class MemberProvider {
         return response;
       }
 
-      const newMember = await this.memberModel.create(member);
+      const newMember = await this.memberModel.create({
+        ...member,
+        personId,
+      });
       response.data = newMember;
 
       return response;
