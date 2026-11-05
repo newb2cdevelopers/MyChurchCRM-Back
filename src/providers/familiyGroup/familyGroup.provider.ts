@@ -8,10 +8,13 @@ import {
   FamilyGroupAttendanceDocument,
 } from 'src/schemas/familyGroup/familyGroup.schema';
 import {
+  FamilyGroupMembership,
+  FamilyGroupMembershipDocument,
+} from 'src/schemas/familyGroup/familyGroupMembership.schema';
+import {
   CreateFamilyGroupDto,
   UpdateFamilyGroupDto,
   RegisterAttendanceDto,
-  RegisterFamilyGroupMemberDto,
 } from 'src/schemas/familyGroup/familyGroup.dto';
 import { Members, MemberDocument } from 'src/schemas/member/member.shema';
 import {
@@ -28,6 +31,7 @@ import { Church, ChurchTextDocument } from 'src/schemas/churches/church.schema';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
 import { TtlCache } from 'src/utilities/ttl-cache';
+import { withLegacyMemberFields } from 'src/utils/legacy-identity.util';
 
 // Cache for getUserScopeInfo (user roles/zone/member) — changes rarely.
 const USER_SCOPE_CACHE_TTL_MS = 60_000;
@@ -53,14 +57,19 @@ export class FamilyGroupProvider {
     private localityModel: Model<LocalityTextDocument>,
     @InjectModel(FamilyGroupAttendance.name)
     private familyGroupAttendanceModel: Model<FamilyGroupAttendanceDocument>,
+    @InjectModel(FamilyGroupMembership.name)
+    private membershipModel: Model<FamilyGroupMembershipDocument>,
     @InjectModel(Church.name) private churchModel: Model<ChurchTextDocument>,
   ) {}
 
   async getFamilyGroupById(id: string) {
-    return this.familyGroupModel
+    const familyGroup = await this.familyGroupModel
       .findById(id)
       .populate([
-        'leader',
+        {
+          path: 'leader',
+          populate: { path: 'personId', model: 'Person' },
+        },
         {
           path: 'neighborhood',
           populate: {
@@ -70,6 +79,131 @@ export class FamilyGroupProvider {
         },
       ])
       .lean();
+
+    if (!familyGroup) {
+      return null;
+    }
+
+    const memberships = await this.getMembershipsByFamilyGroup(id);
+
+    // Keep the legacy "members" shape during the transition so existing
+    // clients keep working while the data lives in familyGroupMemberships.
+    return {
+      ...familyGroup,
+      leader: this.withLegacyLeader(familyGroup.leader),
+      members: memberships.map((membership) => this.toLegacyMember(membership)),
+    };
+  }
+
+  async findFamilyGroupById(id: string) {
+    return this.familyGroupModel.findById(id).lean();
+  }
+
+  async getMembershipsByFamilyGroup(familyGroupId: string) {
+    return this.membershipModel
+      .find({ familyGroupId })
+      .sort({ createdAt: 1 })
+      .populate({ path: 'personId', model: 'Person' })
+      .lean();
+  }
+
+  async getMembershipIdsByFamilyGroup(
+    familyGroupId: string,
+  ): Promise<string[]> {
+    const memberships = await this.membershipModel
+      .find({ familyGroupId })
+      .select('_id')
+      .lean();
+
+    return memberships.map((membership) => membership._id.toString());
+  }
+
+  async findMembershipById(id: string, familyGroupId: string) {
+    return this.membershipModel.findOne({ _id: id, familyGroupId }).lean();
+  }
+
+  async findActiveMembershipByPerson(
+    personId: string,
+    churchId: string,
+    excludeId?: string,
+  ) {
+    const filter: FilterQuery<FamilyGroupMembershipDocument> = {
+      personId,
+      churchId,
+      status: 'active',
+    };
+
+    if (excludeId) {
+      filter._id = { $ne: excludeId };
+    }
+
+    return this.membershipModel.findOne(filter).lean();
+  }
+
+  async createMembership(data: {
+    _id?: string;
+    familyGroupId: string;
+    churchId: string;
+    personId: string;
+    startingDate?: string;
+    comments?: string;
+    status?: 'active' | 'inactive';
+  }) {
+    return this.membershipModel.create({
+      ...data,
+      status: data.status || 'active',
+    });
+  }
+
+  async updateMembership(
+    id: string,
+    data: {
+      personId?: string;
+      startingDate?: string;
+      comments?: string;
+    },
+  ) {
+    return this.membershipModel
+      .findByIdAndUpdate(id, { $set: data }, { new: true })
+      .lean();
+  }
+
+  private toLegacyMember(membership: {
+    _id: unknown;
+    personId?: unknown;
+    startingDate?: string;
+    comments?: string;
+  }) {
+    const person = membership.personId as
+      | {
+          fullName?: string;
+          documentNumber?: string;
+          documentType?: string;
+          address?: string;
+          mobilePhone?: string;
+          email?: string;
+          birthDate?: Date;
+        }
+      | undefined;
+
+    return {
+      _id: membership._id,
+      name: person?.fullName || '',
+      documentNumber: person?.documentNumber || '',
+      documentType: person?.documentType || '',
+      address: person?.address || '',
+      mobilePhone: person?.mobilePhone || '',
+      email: person?.email || '',
+      birthDate: person?.birthDate,
+      startingDate: membership.startingDate,
+      comments: membership.comments,
+    };
+  }
+
+  private withLegacyLeader(leader: unknown) {
+    if (!leader || typeof leader !== 'object') return leader;
+
+    return withLegacyMemberFields(leader as { personId?: unknown });
   }
 
   async getChurchFamilyGroupTypes(churchId: string): Promise<string[] | null> {
@@ -172,7 +306,13 @@ export class FamilyGroupProvider {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit || 10)
-        .populate(['leader', 'neighborhood'])
+        .populate([
+          {
+            path: 'leader',
+            populate: { path: 'personId', model: 'Person' },
+          },
+          'neighborhood',
+        ])
         .lean(),
       this.familyGroupModel.countDocuments(filter),
     ]);
@@ -184,7 +324,10 @@ export class FamilyGroupProvider {
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     return {
-      data: data as unknown as FamilyGroup[],
+      data: data.map((familyGroup) => ({
+        ...familyGroup,
+        leader: this.withLegacyLeader(familyGroup.leader),
+      })) as unknown as FamilyGroup[],
       metadata: { currentPage, totalPages, totalRecords },
     };
   }
@@ -231,7 +374,7 @@ export class FamilyGroupProvider {
       }
 
       const newGroup = await this.familyGroupModel.create(familyGroup);
-      response.data = newGroup;
+      response.data = await this.getFamilyGroupById(String(newGroup._id));
 
       return response;
     } catch (error) {
@@ -321,9 +464,21 @@ export class FamilyGroupProvider {
       },
     );
 
-    response.data = await this.familyGroupModel
+    const updatedGroup = await this.familyGroupModel
       .findById(id)
-      .populate(['leader', 'neighborhood']);
+      .populate({
+        path: 'leader',
+        populate: { path: 'personId', model: 'Person' },
+      })
+      .populate('neighborhood')
+      .lean();
+
+    response.data = updatedGroup
+      ? {
+          ...updatedGroup,
+          leader: this.withLegacyLeader(updatedGroup.leader),
+        }
+      : null;
 
     return response;
   }
@@ -350,17 +505,13 @@ export class FamilyGroupProvider {
         },
       );
 
-      const existingMemberIds = existingGroup.members
-        .map((member) => {
-          return member._id;
-        })
-        .map((memberId) => {
-          return memberId.toString();
-        });
+      const existingMemberIds = await this.getMembershipIdsByFamilyGroup(
+        familyGroupAttendance.familyGroup,
+      );
 
       if (
         !comingMemberIds.every((memberId) =>
-          existingMemberIds.includes(memberId),
+          existingMemberIds.includes(memberId.toString()),
         )
       ) {
         response.message =
@@ -409,125 +560,6 @@ export class FamilyGroupProvider {
       response.message =
         'Se ha presentado un error registrando la asistencia del grupo familiar';
 
-      return response;
-    }
-  }
-
-  async registerFamilyGroupMember(
-    familyGroupId: string,
-    familyMemberData: RegisterFamilyGroupMemberDto,
-  ): Promise<GeneralResponse> {
-    const response: GeneralResponse = { isSuccessful: true };
-
-    try {
-      const existingFamilyGroup = await this.familyGroupModel.findOne({
-        _id: familyGroupId,
-      });
-
-      if (!existingFamilyGroup) {
-        response.isSuccessful = false;
-        response.message = 'El grupo familiar no es valido.';
-        return response;
-      }
-
-      try {
-        if (familyMemberData.memberId) {
-          const filterMember = existingFamilyGroup.members.filter((member) => {
-            return (
-              member._id.toString() === familyMemberData.memberId.toString()
-            );
-          });
-
-          if (filterMember.length === 0) {
-            response.isSuccessful = false;
-            response.message = 'Información del integrante no es valida';
-
-            return response;
-          }
-
-          await this.familyGroupModel.findOneAndUpdate(
-            {
-              _id: familyGroupId,
-              'members._id': familyMemberData.memberId,
-            },
-            {
-              $set: {
-                'members.$.name': familyMemberData.name,
-                'members.$.documentNumber': familyMemberData.documentNumber,
-                'members.$.documentType': familyMemberData.documentType,
-                'members.$.address': familyMemberData.address,
-                'members.$.mobilePhone': familyMemberData.mobilePhone,
-                'members.$.email': familyMemberData.email,
-                'members.$.birthDate': familyMemberData.birthDate,
-                'members.$.comments': familyMemberData.comments,
-              },
-            },
-          );
-        } else {
-          const existingMember = await this.familyGroupModel.findOne({
-            'members.documentNumber': familyMemberData.documentNumber,
-            'members.documentType': familyMemberData.documentType,
-          });
-
-          if (existingMember) {
-            response.isSuccessful = false;
-            response.message =
-              'Este miembro ya está registrado en otro grupo familiar';
-
-            return response;
-          }
-
-          const newMember = {
-            name: familyMemberData.name,
-            documentNumber: familyMemberData.documentNumber,
-            documentType: familyMemberData.documentType,
-            address: familyMemberData.address,
-            mobilePhone: familyMemberData.mobilePhone,
-            email: familyMemberData.email,
-            birthDate: familyMemberData.birthDate,
-            comments: familyMemberData.comments,
-          };
-
-          await this.familyGroupModel.updateOne(
-            {
-              _id: familyGroupId,
-            },
-            {
-              $push: { members: newMember },
-            },
-            {
-              new: true,
-            },
-          );
-        }
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        this.logger.error(
-          `[registerFamilyGroupMember] Error updating member: ${err.message}`,
-          err.stack,
-        );
-
-        response.isSuccessful = false;
-        response.message = 'Error actualizando la información del integrante.';
-
-        return response;
-      }
-
-      response.data = await this.familyGroupModel
-        .findById(familyGroupId)
-        .populate(['leader', 'neighborhood'])
-        .lean();
-
-      return response;
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      this.logger.error(
-        `[registerFamilyGroupMember] Error registering member: ${err.message}`,
-        err.stack,
-      );
-
-      response.isSuccessful = false;
-      response.message = 'Error actualizando la información del integrante';
       return response;
     }
   }

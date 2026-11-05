@@ -14,6 +14,10 @@ import {
 import { Members, MemberSchema } from 'src/schemas/member/member.shema';
 import { Users, UserSchema } from 'src/schemas/user/user.schema';
 import { Church, ChurchSchema } from 'src/schemas/churches/church.schema';
+import {
+  LevelEnrollment,
+  LevelEnrollmentSchema,
+} from 'src/schemas/levelEnrollment/levelEnrollment.schema';
 
 import { SundaySchoolController } from 'src/controllers/sundaySchool/sundaySchool.controller';
 
@@ -28,9 +32,11 @@ import { StudentProvider } from 'src/providers/sundaySchool/student.provider';
 import { SundaySchoolAttendanceProvider } from 'src/providers/sundaySchool/attendance.provider';
 import { SundaySchoolClassProvider } from 'src/providers/sundaySchool/class.provider';
 import { SundaySchoolReportProvider } from 'src/providers/sundaySchool/report.provider';
+import { LevelEnrollmentProvider } from 'src/providers/sundaySchool/levelEnrollment.provider';
 import { ChurchProvider } from 'src/providers/churches/church.provider';
 
 import { RolePermissionModule } from 'src/modules/role-permission/role-permission.module';
+import { PersonModule } from 'src/modules/person/person.module';
 
 @Module({
   imports: [
@@ -51,7 +57,11 @@ import { RolePermissionModule } from 'src/modules/role-permission/role-permissio
     MongooseModule.forFeature([{ name: Members.name, schema: MemberSchema }]),
     MongooseModule.forFeature([{ name: Users.name, schema: UserSchema }]),
     MongooseModule.forFeature([{ name: Church.name, schema: ChurchSchema }]),
+    MongooseModule.forFeature([
+      { name: LevelEnrollment.name, schema: LevelEnrollmentSchema },
+    ]),
     RolePermissionModule,
+    PersonModule,
   ],
   controllers: [SundaySchoolController],
   providers: [
@@ -65,6 +75,7 @@ import { RolePermissionModule } from 'src/modules/role-permission/role-permissio
     SundaySchoolAttendanceProvider,
     SundaySchoolClassProvider,
     SundaySchoolReportProvider,
+    LevelEnrollmentProvider,
     ChurchProvider,
   ],
 })

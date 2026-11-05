@@ -46,35 +46,6 @@ const MemberMinistryStudySchema =
   SchemaFactory.createForClass(MemberMinistryStudy);
 
 @Schema()
-class MemberWorkFront {
-  _id: number;
-
-  @Prop({
-    required: true,
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Workfront',
-  })
-  workFrontId: string;
-
-  @Prop()
-  role: string;
-
-  @Prop()
-  startDate: Date;
-
-  @Prop()
-  endDate: Date;
-
-  @Prop()
-  status: string;
-
-  @Prop()
-  comments: string;
-}
-
-const MemberWorkFrontSchema = SchemaFactory.createForClass(MemberWorkFront);
-
-@Schema()
 class Relative {
   _id: number;
 
@@ -128,47 +99,11 @@ export class Members {
   })
   personId?: mongoose.Types.ObjectId;
 
-  @Prop({ required: true })
-  documentNumber: string;
-
-  @Prop({ required: true })
-  fullName: string;
-
-  @Prop({ required: true })
-  documentType: string;
-
-  @Prop({ required: true })
-  address: string;
-
-  @Prop()
-  housingType: string;
-
-  @Prop()
-  landLine: string;
-
-  @Prop({ required: true })
-  mobilePhone: string;
-
-  @Prop()
-  email: string;
-
-  @Prop()
-  birthDate: Date;
-
-  @Prop()
-  maritalStatus: string;
-
-  @Prop()
-  educationalLevel: string;
-
   @Prop({ type: [AdditionalAcademicStudySchema], default: [] })
   additionalAcademicStudies: [AdditionalAcademicStudy];
 
   @Prop({ type: [RelativeSchema], default: [] })
   relatives: [Relative];
-
-  @Prop()
-  occupation: string;
 
   @Prop()
   conversionyear: number;
@@ -194,9 +129,6 @@ export class Members {
   @Prop()
   inactiveReason: string;
 
-  @Prop({ type: [MemberWorkFrontSchema], default: [] })
-  workFronts: [MemberWorkFront];
-
   @Prop({
     required: false,
     type: mongoose.Schema.Types.ObjectId,
@@ -213,7 +145,6 @@ export type MemberDocument = Members & mongoose.Document;
 export const MemberSchema = SchemaFactory.createForClass(Members);
 MemberSchema.index({ churchId: 1, createdAt: -1 });
 MemberSchema.index({ churchId: 1, workfront: 1 });
-MemberSchema.index({ documentNumber: 1, churchId: 1 }, { unique: true });
 MemberSchema.index(
   { personId: 1, churchId: 1 },
   {

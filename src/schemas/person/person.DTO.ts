@@ -33,10 +33,14 @@ export class CreatePersonDto {
   @IsString()
   secondName?: string;
 
-  @ApiProperty({ type: String, description: 'First last name' })
+  @ApiProperty({
+    type: String,
+    required: false,
+    description: 'First last name',
+  })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  firstLastName: string;
+  firstLastName?: string;
 
   @ApiProperty({
     type: String,

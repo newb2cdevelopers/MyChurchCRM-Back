@@ -1,24 +1,55 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model } from 'mongoose';
+import { FilterQuery, Model, Types } from 'mongoose';
 import { Students, StudentDocument } from 'src/schemas/student/student.schema';
 import {
   CreateStudentDto,
   UpdateStudentDto,
 } from 'src/schemas/student/student.DTO';
 import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
+import { PersonProvider } from 'src/providers/person/person.provider';
+import { withLegacyStudentFields } from 'src/utils/legacy-identity.util';
 
 @Injectable()
 export class StudentProvider {
   constructor(
     @InjectModel(Students.name)
     private readonly studentModel: Model<StudentDocument>,
+    private readonly personProvider: PersonProvider,
   ) {}
 
   async create(
-    student: CreateStudentDto & { churchId: string },
+    student: CreateStudentDto & {
+      churchId: string;
+      personId?: Types.ObjectId;
+    },
   ): Promise<StudentDocument> {
-    return this.studentModel.create(student);
+    // Identity fields live in Person; only student-specific data is persisted.
+    return this.studentModel.create({
+      personId: student.personId,
+      fatherName: student.fatherName,
+      motherName: student.motherName,
+      emergencyContactName: student.emergencyContactName,
+      emergencyContactPhone: student.emergencyContactPhone,
+      guardianName: student.guardianName,
+      observations: student.observations,
+      levelId: student.levelId,
+      churchId: student.churchId,
+    });
+  }
+
+  async findByPersonId(
+    personId: string,
+    churchId: string,
+    excludeId?: string,
+  ): Promise<StudentDocument | null> {
+    const filter: FilterQuery<StudentDocument> = { personId, churchId };
+
+    if (excludeId) {
+      filter._id = { $ne: excludeId };
+    }
+
+    return this.studentModel.findOne(filter).lean();
   }
 
   async getAll(
@@ -40,12 +71,8 @@ export class StudentProvider {
     }
 
     if (search) {
-      const regex = new RegExp(search, 'i');
-      filter.$or = [
-        { name: regex },
-        { lastName: regex },
-        { documentNumber: regex },
-      ];
+      const personIds = await this.personProvider.findIdsBySearch(search);
+      filter.$or = [{ personId: { $in: personIds } }];
     }
 
     const [data, totalRecords] = await Promise.all([
@@ -55,6 +82,7 @@ export class StudentProvider {
         .skip(skip)
         .limit(limit || 10)
         .populate('levelId')
+        .populate({ path: 'personId', model: 'Person' })
         .lean(),
       this.studentModel.countDocuments(filter),
     ]);
@@ -65,36 +93,55 @@ export class StudentProvider {
     });
     const totalPages = Math.ceil(totalRecords / pageSize);
 
-    return { data, metadata: { currentPage, totalPages, totalRecords } };
+    return {
+      data: data.map((student) =>
+        withLegacyStudentFields(student),
+      ) as unknown as Students[],
+      metadata: { currentPage, totalPages, totalRecords },
+    };
   }
 
   async getById(id: string): Promise<StudentDocument | null> {
-    return this.studentModel.findById(id).populate('levelId').lean();
-  }
+    const student = await this.studentModel
+      .findById(id)
+      .populate('levelId')
+      .populate({ path: 'personId', model: 'Person' })
+      .lean();
 
-  // Search limited by church. Unlike members.findByDocument, here it is filtered by churchId to respect the uniqueness { documentNumber, churchId } in the students collection and maintain isolation between churches.
-  async findByDocument(
-    documentNumber: string,
-    churchId: string,
-    excludeId?: string,
-  ): Promise<StudentDocument | null> {
-    const filter: FilterQuery<StudentDocument> = { documentNumber, churchId };
+    if (!student) return null;
 
-    if (excludeId) {
-      filter._id = { $ne: excludeId };
-    }
-
-    return this.studentModel.findOne(filter).lean();
+    return withLegacyStudentFields(student) as unknown as StudentDocument;
   }
 
   async update(
     id: string,
     student: UpdateStudentDto,
+    personId?: string,
   ): Promise<StudentDocument | null> {
-    return this.studentModel
-      .findByIdAndUpdate(id, { $set: student }, { new: true })
+    // Identity fields live in `persons`; only student-owned fields are persisted here.
+    const studentData = Object.fromEntries(
+      Object.entries({
+        fatherName: student.fatherName,
+        motherName: student.motherName,
+        emergencyContactName: student.emergencyContactName,
+        emergencyContactPhone: student.emergencyContactPhone,
+        guardianName: student.guardianName,
+        observations: student.observations,
+        levelId: student.levelId,
+      }).filter(([, value]) => value !== undefined),
+    );
+
+    const update = personId ? { ...studentData, personId } : studentData;
+
+    const updated = await this.studentModel
+      .findByIdAndUpdate(id, { $set: update }, { new: true })
       .populate('levelId')
+      .populate({ path: 'personId', model: 'Person' })
       .lean();
+
+    if (!updated) return null;
+
+    return withLegacyStudentFields(updated) as unknown as StudentDocument;
   }
 
   async delete(id: string): Promise<void> {
@@ -109,11 +156,16 @@ export class StudentProvider {
   }
 
   async getForPromotion(levelId: string): Promise<StudentDocument[]> {
-    return this.studentModel
+    const students = await this.studentModel
       .find({ levelId, graduated: { $ne: true } })
-      .select('name lastName birthDate')
-      .sort({ name: 1, lastName: 1 })
+      .populate({ path: 'personId', model: 'Person' })
       .lean();
+
+    return students
+      .map((student) => withLegacyStudentFields(student))
+      .sort((a, b) =>
+        (a.name || '').localeCompare(b.name || ''),
+      ) as unknown as StudentDocument[];
   }
 
   async getManyByIds(ids: string[]): Promise<StudentDocument[]> {

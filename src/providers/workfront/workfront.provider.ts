@@ -86,14 +86,24 @@ export class WorkfrontProvider {
 
   async getWorkFrontAssignmentData(churchId: string): Promise<GeneralResponse> {
     const frontsByChurch = await this.workfrontModel.find({ churchId });
+
     const userByChurch = await this.usertModel
       .find({ churchId })
-      .populate<{ workfront: Workfront }>('workfront');
+      .populate<{ workfront: Workfront }>('workfront')
+      .populate({ path: 'personId', model: 'Person' });
 
     const response: WorkfrontAssignment = {
       Users: userByChurch.map((user) => {
+        const person = (user as { personId?: unknown }).personId as
+          | { firstName?: string; firstLastName?: string }
+          | undefined;
+
+        const displayName = person
+          ? `${person.firstName || ''} ${person.firstLastName || ''}`.trim()
+          : '';
+
         const mappedUser: UserAssignment = {
-          Name: user.name + ' ' + user.lastName,
+          Name: displayName,
           Id: user._id,
           CurrentWorkfront: user.workfront?.name,
         };

@@ -41,6 +41,28 @@ export class AuthBusiness {
     private jwtService: JwtService,
   ) {}
 
+  /**
+   * Resolves the display name from the canonical person linked to the user.
+   * Identity data no longer lives in the users collection.
+   */
+  private getPersonDisplayName(user: Users): {
+    name: string;
+    lastName: string;
+  } {
+    const person = (user as { personId?: unknown }).personId as
+      | { firstName?: string; firstLastName?: string }
+      | undefined;
+
+    if (person && typeof person === 'object') {
+      return {
+        name: person.firstName || '',
+        lastName: person.firstLastName || '',
+      };
+    }
+
+    return { name: '', lastName: '' };
+  }
+
   private async getChurchName(churchId?: string): Promise<string | null> {
     if (!churchId) return null;
 
@@ -254,13 +276,14 @@ export class AuthBusiness {
       : [];
 
     const churchName = await this.getChurchName(user.churchId?.toString());
+    const { name, lastName } = this.getPersonDisplayName(user);
 
     return {
       access_token,
       refresh_token: refreshToken,
       email: user.email,
-      name: user.name,
-      lastName: user.lastName,
+      name,
+      lastName,
       churchId: user.churchId,
       churchName,
       roles: this.generateDashboardInfo(
@@ -347,12 +370,13 @@ export class AuthBusiness {
       : [];
 
     const churchName = await this.getChurchName(user.churchId?.toString());
+    const { name, lastName } = this.getPersonDisplayName(user);
 
     return {
       access_token,
       email: user.email,
-      name: user.name,
-      lastName: user.lastName,
+      name,
+      lastName,
       churchId: user.churchId,
       churchName,
       roles: this.generateDashboardInfo(

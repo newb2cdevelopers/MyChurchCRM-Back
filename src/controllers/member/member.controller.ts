@@ -29,7 +29,6 @@ import {
   AdditionalAcademicStudyDto,
   RelativeDto,
   MemberMinistryStudyDto,
-  MemberWorkFrontDto,
   ChangeMemberStatusDto,
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
@@ -333,34 +332,5 @@ export class MemberController {
       memberId,
       ministryStudiesData,
     );
-  }
-
-  @UseGuards(AuthGuard)
-  @Put('updateWorkfrontsInfo/:memberId')
-  @ApiOperation({
-    summary: 'Update workfront assignments',
-    description:
-      'Updates the workfront (ministry front) assignments of a member.',
-  })
-  @ApiOkResponse({
-    description: 'Workfront assignments updated successfully',
-    schema: {
-      example: {
-        isSuccessful: true,
-        data: { _id: '679d017daf1fff94edac0c1a' },
-      },
-    },
-  })
-  @ApiParam({
-    name: 'memberId',
-    required: true,
-    description: 'Member ID',
-  })
-  @ApiBody({ type: MemberWorkFrontDto })
-  async updateWorkfronts(
-    @Param('memberId') memberId: string,
-    @Body() workfrontData: MemberWorkFrontDto,
-  ): Promise<GeneralResponse> {
-    return await this.memberBusiness.updateWorkfronts(memberId, workfrontData);
   }
 }

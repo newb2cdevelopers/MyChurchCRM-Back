@@ -20,10 +20,13 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "start:azure": "npm run build && func host start",
-    "migrate:users": "ts-node scripts/backfill-user-documents.ts",
     "seed:modules-permissions": "ts-node scripts/seed-modules-permissions.ts",
-    "migrate:member-status": "ts-node scripts/migrate-member-status-index.ts",
-    "migrate:persons": "ts-node scripts/backfill-persons.ts"
+    "migrate:persons": "ts-node scripts/backfill-persons.ts",
+    "migrate:family-group-memberships": "ts-node scripts/backfill-family-group-memberships.ts",
+    "migrate:level-enrollments": "ts-node scripts/backfill-level-enrollments.ts",
+    "migrate:drop-legacy-identity-indexes": "ts-node scripts/drop-legacy-identity-indexes.ts",
+    "migrate:cleanup-phase3-legacy-fields": "ts-node scripts/cleanup-phase3-legacy-fields.ts",
+    "verify:phase3-readiness": "ts-node scripts/verify-phase3-readiness.ts"
   },
   "dependencies": {
     "@azure/functions": "^1.0.3",

@@ -7,6 +7,10 @@ import {
   FamilyGroupAttendance,
   FamilyGroupAttendanceSchema,
 } from 'src/schemas/familyGroup/familyGroup.schema';
+import {
+  FamilyGroupMembership,
+  FamilyGroupMembershipSchema,
+} from 'src/schemas/familyGroup/familyGroupMembership.schema';
 
 import { Members, MemberSchema } from 'src/schemas/member/member.shema';
 import {
@@ -22,6 +26,7 @@ import { FamilyGroupBusiness } from 'src/business/familyGroup/familyGroup.bl';
 import { FamilyGroupProvider } from 'src/providers/familiyGroup/familyGroup.provider';
 import { FamiliyGroupController } from 'src/controllers/familyGroup/familyGroup.controller';
 import { RolePermissionModule } from 'src/modules/role-permission/role-permission.module';
+import { PersonModule } from 'src/modules/person/person.module';
 
 @Module({
   imports: [
@@ -30,6 +35,12 @@ import { RolePermissionModule } from 'src/modules/role-permission/role-permissio
     ]),
     MongooseModule.forFeature([
       { name: FamilyGroupAttendance.name, schema: FamilyGroupAttendanceSchema },
+    ]),
+    MongooseModule.forFeature([
+      {
+        name: FamilyGroupMembership.name,
+        schema: FamilyGroupMembershipSchema,
+      },
     ]),
     MongooseModule.forFeature([{ name: Members.name, schema: MemberSchema }]),
     MongooseModule.forFeature([
@@ -42,6 +53,7 @@ import { RolePermissionModule } from 'src/modules/role-permission/role-permissio
     MongooseModule.forFeature([{ name: Users.name, schema: UserSchema }]),
     MongooseModule.forFeature([{ name: Church.name, schema: ChurchSchema }]),
     RolePermissionModule,
+    PersonModule,
   ],
   controllers: [FamiliyGroupController],
   providers: [FamilyGroupBusiness, FamilyGroupProvider],

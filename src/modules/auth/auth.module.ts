@@ -20,6 +20,7 @@ import { AuthGoogleController } from 'src/controllers/auth/auth.google.controlle
 import { AuthGoogleBusiness } from 'src/business/auth/google.auth.bl';
 import { UserProvider } from 'src/providers/user/user.provider';
 import { RolePermissionModule } from 'src/modules/role-permission/role-permission.module';
+import { PersonModule } from 'src/modules/person/person.module';
 
 @Global()
 @Module({
@@ -35,6 +36,7 @@ import { RolePermissionModule } from 'src/modules/role-permission/role-permissio
       signOptions: { expiresIn: '1h' }, // Changed from 3h to 1h
     }),
     RolePermissionModule,
+    PersonModule,
   ],
   controllers: [AuthController, AuthGoogleController],
   providers: [

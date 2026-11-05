@@ -37,8 +37,8 @@ export class Person {
   @Prop({ trim: true })
   secondName?: string;
 
-  @Prop({ required: true, trim: true })
-  firstLastName: string;
+  @Prop({ trim: true })
+  firstLastName?: string;
 
   @Prop({ trim: true })
   secondLastName?: string;

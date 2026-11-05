@@ -126,10 +126,32 @@ export class SundaySchoolReportProvider {
       { $unwind: { path: '$teacher', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
+          from: 'persons',
+          localField: 'teacher.personId',
+          foreignField: '_id',
+          as: 'teacherPerson',
+        },
+      },
+      {
+        $unwind: {
+          path: '$teacherPerson',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
           from: 'students',
           localField: 'studentsAttendance.studentId',
           foreignField: '_id',
           as: 'students',
+        },
+      },
+      {
+        $lookup: {
+          from: 'persons',
+          localField: 'students.personId',
+          foreignField: '_id',
+          as: 'studentPersons',
         },
       },
       {
@@ -143,7 +165,7 @@ export class SundaySchoolReportProvider {
                 levelId: 1,
                 levelName: '$level.name',
                 teacherId: 1,
-                teacherName: '$teacher.fullName',
+                teacherName: '$teacherPerson.fullName',
                 lessonName: 1,
                 attendeesCount: 1,
                 students: {
@@ -172,14 +194,27 @@ export class SundaySchoolReportProvider {
                             },
                           },
                           in: {
-                            $trim: {
-                              input: {
-                                $concat: [
-                                  { $ifNull: ['$$student.name', ''] },
-                                  ' ',
-                                  { $ifNull: ['$$student.lastName', ''] },
-                                ],
+                            $let: {
+                              vars: {
+                                person: {
+                                  $arrayElemAt: [
+                                    {
+                                      $filter: {
+                                        input: '$studentPersons',
+                                        as: 'p',
+                                        cond: {
+                                          $eq: [
+                                            '$$p._id',
+                                            '$$student.personId',
+                                          ],
+                                        },
+                                      },
+                                    },
+                                    0,
+                                  ],
+                                },
                               },
+                              in: { $ifNull: ['$$person.fullName', ''] },
                             },
                           },
                         },

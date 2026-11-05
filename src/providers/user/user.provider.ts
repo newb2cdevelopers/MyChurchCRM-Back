@@ -28,7 +28,8 @@ export class UserProvider {
         .limit(limit || 10)
         .select('-password -__v -confirmToken')
         .populate('roles')
-        .populate('zoneId'),
+        .populate('zoneId')
+        .populate({ path: 'personId', model: 'Person' }),
       this.userModel.countDocuments(filter),
     ]);
 
@@ -70,20 +71,44 @@ export class UserProvider {
   async newUser(user: UserDTO) {
     const confirmToken = nanoid(32);
 
-    const userToCreate = {
-      ...user,
-      email: user.email?.toLowerCase().trim(),
+    const extended = user as UserDTO & {
+      personId?: string;
+      status?: string;
+      active?: boolean;
+      registrationSnapshot?: Record<string, unknown>;
+      roles?: string[];
     };
 
+    // Identity fields (name, lastName, documentType, documentNumber) belong to
+    // the canonical person and must not be persisted in the users collection.
     return this.userModel.create({
-      ...userToCreate,
+      email: user.email?.toLowerCase().trim(),
+      password: user.password,
+      churchId: user.churchId,
+      roles: extended.roles,
+      active: extended.active ?? false,
+      personId: extended.personId,
+      status: extended.status,
+      registrationSnapshot: extended.registrationSnapshot,
       confirmToken,
       workfront: null,
     });
   }
 
   async updateUser(id: string, user: UpdateUserDTO) {
-    return this.userModel.updateOne({ _id: id }, user);
+    // Identity fields live in `persons`; only user-owned fields are persisted here.
+    const update = Object.fromEntries(
+      Object.entries({
+        email: user.email,
+        churchId: user.churchId,
+        active: user.active,
+        roles: user.roles,
+        zoneId: user.zoneId,
+        workfront: user.workfront,
+      }).filter(([, value]) => value !== undefined),
+    );
+
+    return this.userModel.updateOne({ _id: id }, { $set: update });
   }
 
   // Activate the account, mark it as active and clean the registry snapshot

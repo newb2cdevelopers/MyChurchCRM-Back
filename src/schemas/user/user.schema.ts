@@ -24,12 +24,6 @@ export class Users {
   email: string;
 
   @Prop({ required: true })
-  name: string;
-
-  @Prop({ required: true })
-  lastName: string;
-
-  @Prop({ required: true })
   password: string;
 
   @Prop({ required: true })
@@ -46,12 +40,6 @@ export class Users {
 
   @Prop({ required: false, type: mongoose.Schema.Types.ObjectId, ref: 'Zone' })
   zoneId: string;
-
-  @Prop({ required: true })
-  documentType: string;
-
-  @Prop({ unique: true, sparse: true })
-  documentNumber: string;
 
   @Prop({
     required: true,

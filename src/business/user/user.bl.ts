@@ -50,24 +50,23 @@ export class UserBusiness {
 
     if (search) {
       const regex = new RegExp(search, 'i');
+      const personIds = await this.personProvider.findIdsBySearch(search);
 
-      filter.$or = [{ name: regex }, { lastName: regex }, { email: regex }];
+      filter.$or = [{ email: regex }, { personId: { $in: personIds } }];
     }
 
     const result = await this.userProvider.getAllUsers(filter, page, limit);
 
-    // Get the personIds of the users in the result
+    // personId is populated with the canonical person, so extract its _id.
     const personIds = result.data
-      .map((u) => (u as { personId?: unknown }).personId)
-      .filter((personId): personId is unknown => Boolean(personId));
+      .map((u) => this.extractPersonId((u as { personId?: unknown }).personId))
+      .filter((personId): personId is string => Boolean(personId));
 
     let memberPersonIds = new Set<string>();
 
     if (personIds.length > 0) {
-      const personIdStrings = personIds.map((personId) => String(personId));
-
       const memberPersonIdList = await this.memberProvider.findMemberPersonIds(
-        personIdStrings,
+        personIds,
         churchId,
       );
 
@@ -80,15 +79,48 @@ export class UserBusiness {
         personId?: unknown;
       };
 
+      const personId = this.extractPersonId(userWithPerson.personId);
+      const person = this.extractPerson(userWithPerson.personId);
+
+      // Keep the legacy flat fields in the response during the transition so
+      // existing clients keep working while identity moves to persons.
       return {
         ...userWithPerson,
-        isMember: userWithPerson.personId
-          ? memberPersonIds.has(String(userWithPerson.personId))
-          : false,
+        name: person?.firstName || '',
+        lastName: person?.firstLastName || '',
+        fullName: person?.fullName || '',
+        documentType: person?.documentType || '',
+        documentNumber: person?.documentNumber || '',
+        isMember: personId ? memberPersonIds.has(personId) : false,
       };
     });
 
     return { data, metadata: result.metadata };
+  }
+
+  private extractPersonId(value: unknown): string | null {
+    if (!value) return null;
+    if (typeof value === 'object' && value !== null && '_id' in value) {
+      return String((value as { _id: unknown })._id);
+    }
+    return String(value);
+  }
+
+  private extractPerson(value: unknown): {
+    firstName?: string;
+    firstLastName?: string;
+    fullName?: string;
+    documentType?: string;
+    documentNumber?: string;
+  } | null {
+    if (!value || typeof value !== 'object') return null;
+    return value as {
+      firstName?: string;
+      firstLastName?: string;
+      fullName?: string;
+      documentType?: string;
+      documentNumber?: string;
+    };
   }
 
   async getUserById(id: string): Promise<Users> {

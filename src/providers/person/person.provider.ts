@@ -41,8 +41,60 @@ export class PersonProvider {
     return this.personModel.findById(id).exec();
   }
 
+  /**
+   * Returns the ids of persons whose name fields match the search term.
+   * Used to resolve user/member searches that used to rely on duplicated
+   * identity fields stored in the profile collections.
+   */
+  async findIdsByName(search: string): Promise<Types.ObjectId[]> {
+    if (!search) return [];
+
+    const regex = new RegExp(search, 'i');
+
+    const persons = await this.personModel
+      .find({
+        $or: [
+          { firstName: regex },
+          { secondName: regex },
+          { firstLastName: regex },
+          { secondLastName: regex },
+          { fullName: regex },
+        ],
+      })
+      .select('_id')
+      .lean();
+
+    return persons.map((person) => person._id);
+  }
+
   async create(data: Partial<Person>): Promise<PersonDocument> {
     return this.personModel.create(data);
+  }
+
+  /**
+   * Returns the ids of persons matching the term in any name field or in the
+   * document number. Used by profile searches after identity was centralized.
+   */
+  async findIdsBySearch(search: string): Promise<Types.ObjectId[]> {
+    if (!search) return [];
+
+    const regex = new RegExp(search, 'i');
+
+    const persons = await this.personModel
+      .find({
+        $or: [
+          { firstName: regex },
+          { secondName: regex },
+          { firstLastName: regex },
+          { secondLastName: regex },
+          { fullName: regex },
+          { documentNumber: regex },
+        ],
+      })
+      .select('_id')
+      .lean();
+
+    return persons.map((person) => person._id);
   }
 
   async updateMergedInto(
@@ -130,6 +182,7 @@ export class PersonProvider {
     } = {};
 
     if (personData.firstName) update.firstName = personData.firstName;
+    if (personData.documentType) update.documentType = personData.documentType;
     if (personData.secondName) update.secondName = personData.secondName;
     if (personData.firstLastName)
       update.firstLastName = personData.firstLastName;
@@ -137,7 +190,14 @@ export class PersonProvider {
       update.secondLastName = personData.secondLastName;
     if (personData.email) update.email = normalizeEmail(personData.email);
     if (personData.mobilePhone) update.mobilePhone = personData.mobilePhone;
+    if (personData.landLine) update.landLine = personData.landLine;
     if (personData.address) update.address = personData.address;
+    if (personData.housingType) update.housingType = personData.housingType;
+    if (personData.maritalStatus)
+      update.maritalStatus = personData.maritalStatus;
+    if (personData.educationalLevel)
+      update.educationalLevel = personData.educationalLevel;
+    if (personData.occupation) update.occupation = personData.occupation;
     if (personData.birthDate) {
       update.birthDate =
         personData.birthDate instanceof Date
@@ -149,12 +209,20 @@ export class PersonProvider {
       return this.personModel.findById(id).exec();
     }
 
-    const firstName = update.firstName || personData.firstName || '';
-    const secondName = update.secondName || personData.secondName || '';
+    const existingPerson = await this.personModel.findById(id).exec();
+
+    if (!existingPerson) {
+      return null;
+    }
+
+    // Merge with the stored name fields so partial updates never erase the
+    // derived fullName (for example when only the phone number changes).
+    const firstName = update.firstName ?? existingPerson.firstName ?? '';
+    const secondName = update.secondName ?? existingPerson.secondName ?? '';
     const firstLastName =
-      update.firstLastName || personData.firstLastName || '';
+      update.firstLastName ?? existingPerson.firstLastName ?? '';
     const secondLastName =
-      update.secondLastName || personData.secondLastName || '';
+      update.secondLastName ?? existingPerson.secondLastName ?? '';
     update.fullName = [firstName, secondName, firstLastName, secondLastName]
       .filter(Boolean)
       .join(' ');

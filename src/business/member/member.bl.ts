@@ -6,12 +6,12 @@ import {
   AdditionalAcademicStudyDto,
   RelativeDto,
   MemberMinistryStudyDto,
-  MemberWorkFrontDto,
   ChangeMemberStatusDto,
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
 import { PersonProvider } from 'src/providers/person/person.provider';
+import { splitFullName } from 'src/utils/legacy-identity.util';
 
 @Injectable()
 export class MemberBusiness {
@@ -65,14 +65,13 @@ export class MemberBusiness {
       throw new ConflictException('churchId is required');
     }
 
+    const { firstName, firstLastName } = splitFullName(member.fullName);
+
     const person = await this.personProvider.resolveOrCreate({
       documentType: member.documentType,
       documentNumber: member.documentNumber,
-      firstName: (member as { firstName?: string }).firstName || '',
-      secondName: (member as { secondName?: string }).secondName || '',
-      firstLastName: (member as { firstLastName?: string }).firstLastName || '',
-      secondLastName:
-        (member as { secondLastName?: string }).secondLastName || '',
+      firstName,
+      firstLastName,
       email: member.email,
       birthDate: (member as { birthDate?: string }).birthDate,
       mobilePhone: (member as { mobilePhone?: string }).mobilePhone,
@@ -87,7 +86,102 @@ export class MemberBusiness {
     memberId: string,
     updatedMember: MemberGeneralInfoDto,
   ): Promise<GeneralResponse> {
+    const existingMember = await this.provider.getMemberById(memberId);
+
+    if (!existingMember) {
+      return {
+        isSuccessful: false,
+        message: 'Persona no encontrada.',
+      };
+    }
+
+    const personId = this.extractId(existingMember.personId);
+    const churchId = String(existingMember.churchId);
+
+    if (personId) {
+      const { firstName, firstLastName } = splitFullName(
+        updatedMember.fullName,
+      );
+
+      let person = await this.personProvider.findById(personId);
+
+      if (
+        person &&
+        updatedMember.documentNumber &&
+        updatedMember.documentNumber !== person.documentNumber
+      ) {
+        const resolvedPerson = await this.personProvider.resolveOrCreate({
+          documentType: updatedMember.documentType,
+          documentNumber: updatedMember.documentNumber,
+          firstName,
+          firstLastName,
+          email: updatedMember.email,
+          birthDate: updatedMember.birthDate,
+          mobilePhone: updatedMember.mobilePhone,
+          address: updatedMember.address,
+          createdByChurchId: churchId,
+        });
+
+        const duplicate = await this.provider.findByPersonId(
+          String(resolvedPerson._id),
+          churchId,
+          memberId,
+        );
+
+        if (duplicate) {
+          return {
+            isSuccessful: false,
+            message: 'El número de cédula ya está registrado',
+          };
+        }
+
+        const activeElsewhere = await this.provider.findActiveMemberByPersonId(
+          String(resolvedPerson._id),
+        );
+
+        if (activeElsewhere && String(activeElsewhere._id) !== memberId) {
+          return {
+            isSuccessful: false,
+            message: 'El miembro ya se encuentra activo en otra iglesia',
+          };
+        }
+
+        await this.provider.updatePersonId(
+          memberId,
+          String(resolvedPerson._id),
+        );
+        person = resolvedPerson;
+      }
+
+      if (person) {
+        await this.personProvider.updateBasicInfo(person._id, {
+          firstName,
+          firstLastName,
+          documentType: updatedMember.documentType,
+          email: updatedMember.email,
+          mobilePhone: updatedMember.mobilePhone,
+          landLine: updatedMember.landLine,
+          address: updatedMember.address,
+          housingType: updatedMember.housingType,
+          maritalStatus: updatedMember.maritalStatus,
+          educationalLevel: updatedMember.educationalLevel,
+          occupation: updatedMember.occupation,
+          birthDate: updatedMember.birthDate
+            ? new Date(updatedMember.birthDate)
+            : undefined,
+        });
+      }
+    }
+
     return this.provider.updateGeneralMemberInfo(memberId, updatedMember);
+  }
+
+  private extractId(value: unknown): string | null {
+    if (!value) return null;
+    if (typeof value === 'object' && value !== null && '_id' in value) {
+      return String((value as { _id: unknown })._id);
+    }
+    return String(value);
   }
 
   async updateAdditionalAcademicStudies(
@@ -112,12 +206,5 @@ export class MemberBusiness {
     ministryStudiesData: MemberMinistryStudyDto,
   ): Promise<GeneralResponse> {
     return this.provider.updateMinistryStudies(memberId, ministryStudiesData);
-  }
-
-  async updateWorkfronts(
-    memberId: string,
-    workfrontData: MemberWorkFrontDto,
-  ): Promise<GeneralResponse> {
-    return this.provider.updateWorkfronts(memberId, workfrontData);
   }
 }

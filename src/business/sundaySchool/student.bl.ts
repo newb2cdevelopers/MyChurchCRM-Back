@@ -6,9 +6,13 @@ import {
   UpdateStudentDto,
 } from 'src/schemas/student/student.DTO';
 import { Students } from 'src/schemas/student/student.schema';
+import { StudentDocument } from 'src/schemas/student/student.schema';
 import { Level, LevelDocument } from 'src/schemas/level/level.schema';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult } from 'src/dtos/pagination.dto';
+import { PersonProvider } from 'src/providers/person/person.provider';
+import { LevelEnrollmentProvider } from 'src/providers/sundaySchool/levelEnrollment.provider';
+import { PersonSnapshot } from 'src/utils/legacy-identity.util';
 
 const MAESTRO_ROLE = 'Maestro Escuela Dominical';
 
@@ -24,6 +28,8 @@ export class StudentBusiness {
   constructor(
     private readonly provider: StudentProvider,
     private readonly levelProvider: LevelProvider,
+    private readonly personProvider: PersonProvider,
+    private readonly enrollmentProvider: LevelEnrollmentProvider,
   ) {}
 
   async getAll(
@@ -121,21 +127,44 @@ export class StudentBusiness {
       return response;
     }
 
-    const existingStudent = await this.provider.findByDocument(
-      student.documentNumber,
+    // Resolve or create the canonical person so the student profile links to
+    // the single source of identity instead of duplicating personal data.
+    const person = await this.personProvider.resolveOrCreate({
+      documentType: student.documentType,
+      documentNumber: student.documentNumber,
+      firstName: student.name,
+      firstLastName: student.lastName,
+      birthDate: student.birthDate,
+      createdByChurchId: churchId,
+    });
+
+    const existingStudent = await this.provider.findByPersonId(
+      String(person._id),
       churchId,
     );
 
     if (existingStudent) {
       this.logger.warn(
-        `[create] Duplicate document "${student.documentNumber}" for church ${churchId}`,
+        `[create] Duplicate person "${person._id}" for church ${churchId}`,
       );
       response.message = 'Ya existe un estudiante con este número de documento';
 
       return response;
     }
 
-    response.data = await this.provider.create({ ...student, churchId });
+    const createdStudent = await this.provider.create({
+      ...student,
+      churchId,
+      personId: person._id,
+    });
+
+    await this.enrollmentProvider.create({
+      studentId: String(createdStudent._id),
+      levelId: student.levelId,
+      churchId,
+    });
+
+    response.data = await this.provider.getById(String(createdStudent._id));
     response.isSuccessful = true;
 
     return response;
@@ -156,6 +185,9 @@ export class StudentBusiness {
     }
 
     const churchId = existingStudent.churchId.toString();
+    const existingPerson = (
+      existingStudent as StudentDocument & { person?: PersonSnapshot }
+    ).person;
 
     if (student.levelId) {
       const level = await this.levelProvider.getById(student.levelId);
@@ -168,22 +200,89 @@ export class StudentBusiness {
       }
     }
 
-    if (student.documentNumber) {
-      const duplicate = await this.provider.findByDocument(
-        student.documentNumber,
-        churchId,
-        id,
-      );
+    const hasIdentityUpdate = Boolean(
+      student.name ||
+        student.lastName ||
+        student.documentType ||
+        student.documentNumber ||
+        student.birthDate,
+    );
 
-      if (duplicate) {
-        response.message =
-          'Ya existe un estudiante con este número de documento';
+    let personId = this.extractId(existingStudent.personId);
+
+    if (hasIdentityUpdate) {
+      let person = personId
+        ? await this.personProvider.findById(personId)
+        : null;
+
+      if (student.documentNumber) {
+        const documentType =
+          student.documentType || existingPerson?.documentType;
+
+        if (!documentType) {
+          response.message = 'El tipo de documento es obligatorio';
+
+          return response;
+        }
+
+        person = await this.personProvider.resolveOrCreate({
+          documentType,
+          documentNumber: student.documentNumber,
+          firstName: student.name || existingPerson?.firstName || '',
+          firstLastName: student.lastName || existingPerson?.firstLastName,
+          birthDate: student.birthDate,
+          createdByChurchId: churchId,
+        });
+
+        const duplicate = await this.provider.findByPersonId(
+          String(person._id),
+          churchId,
+          id,
+        );
+
+        if (duplicate) {
+          response.message =
+            'Ya existe un estudiante con este número de documento';
+
+          return response;
+        }
+      }
+
+      if (!person) {
+        response.message = 'No se pudo actualizar la identidad del estudiante';
 
         return response;
       }
+
+      await this.personProvider.updateBasicInfo(person._id, {
+        firstName: student.name,
+        firstLastName: student.lastName,
+        documentType: student.documentType,
+        birthDate: student.birthDate ? new Date(student.birthDate) : undefined,
+      });
+
+      personId = String(person._id);
     }
 
-    response.data = await this.provider.update(id, student);
+    const previousLevelId = this.extractId(existingStudent.levelId);
+    const nextLevelId = student.levelId ? String(student.levelId) : null;
+
+    response.data = await this.provider.update(
+      id,
+      student,
+      personId || undefined,
+    );
+
+    // Keep the enrollment history in sync when the level changes.
+    if (nextLevelId && nextLevelId !== previousLevelId) {
+      await this.enrollmentProvider.closeActive([id], 'promoted');
+      await this.enrollmentProvider.create({
+        studentId: id,
+        levelId: nextLevelId,
+        churchId,
+      });
+    }
+
     response.isSuccessful = true;
 
     return response;
@@ -200,11 +299,20 @@ export class StudentBusiness {
       return response;
     }
 
+    await this.enrollmentProvider.closeActive([id], 'withdrawn');
     await this.provider.delete(id);
     response.isSuccessful = true;
     response.message = 'Estudiante eliminado correctamente';
 
     return response;
+  }
+
+  private extractId(value: unknown): string | null {
+    if (!value) return null;
+    if (typeof value === 'object' && value !== null && '_id' in value) {
+      return String((value as { _id: unknown })._id);
+    }
+    return String(value);
   }
 
   async getPromotionPreview(levelId: string, userId?: string) {
@@ -335,6 +443,14 @@ export class StudentBusiness {
       await this.provider.promoteMany(studentIds, {
         levelId: nextLevel._id.toString(),
       });
+      // Close the current enrollment before opening the next one so the
+      // single-active-enrollment index is respected.
+      await this.enrollmentProvider.closeActive(studentIds, 'promoted');
+      await this.enrollmentProvider.openMany(
+        studentIds,
+        nextLevel._id.toString(),
+        currentChurchId,
+      );
       this.logger.log(
         `[promote] Promoted ${studentIds.length} students from ${levelId} to ${nextLevel._id}`,
       );
@@ -348,6 +464,7 @@ export class StudentBusiness {
       graduated: true,
       graduatedAt: new Date(),
     });
+    await this.enrollmentProvider.closeActive(studentIds, 'graduated');
     this.logger.log(
       `[promote] Graduated ${studentIds.length} students from ${levelId}`,
     );

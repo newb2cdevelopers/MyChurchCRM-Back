@@ -7,6 +7,10 @@ import {
 } from 'src/schemas/sundaySchool/attendance.schema';
 import { RegisterAttendanceDto } from 'src/schemas/sundaySchool/attendance.DTO';
 import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
+import {
+  withLegacyMemberFields,
+  withLegacyStudentFields,
+} from 'src/utils/legacy-identity.util';
 
 @Injectable()
 export class SundaySchoolAttendanceProvider {
@@ -33,8 +37,14 @@ export class SundaySchoolAttendanceProvider {
     const [data, totalRecords] = await Promise.all([
       this.attendanceModel
         .find(filter)
-        .populate('studentsAttendance.studentId')
-        .populate('teacherId')
+        .populate({
+          path: 'studentsAttendance.studentId',
+          populate: { path: 'personId', model: 'Person' },
+        })
+        .populate({
+          path: 'teacherId',
+          populate: { path: 'personId', model: 'Person' },
+        })
         .sort({ date: -1 })
         .skip(skip)
         .limit(limit || 10)
@@ -48,7 +58,44 @@ export class SundaySchoolAttendanceProvider {
     });
     const totalPages = Math.ceil(totalRecords / pageSize);
 
-    return { data, metadata: { currentPage, totalPages, totalRecords } };
+    return {
+      data: data.map((attendance) => this.withLegacyRelations(attendance)),
+      metadata: { currentPage, totalPages, totalRecords },
+    };
+  }
+
+  /**
+   * Projects the populated student/teacher persons into the legacy flat fields
+   * so attendance views keep rendering names while the frontend migrates.
+   */
+  private withLegacyRelations<T extends Record<string, unknown>>(
+    attendance: T,
+  ): T {
+    const teacher = attendance.teacherId;
+
+    const studentsAttendance = attendance.studentsAttendance;
+
+    return {
+      ...attendance,
+      teacherId:
+        teacher && typeof teacher === 'object'
+          ? withLegacyMemberFields(teacher as { personId?: unknown })
+          : teacher,
+      studentsAttendance: Array.isArray(studentsAttendance)
+        ? studentsAttendance.map((entry) => {
+            const record = entry as Record<string, unknown>;
+            const student = record.studentId;
+
+            return {
+              ...record,
+              studentId:
+                student && typeof student === 'object'
+                  ? withLegacyStudentFields(student as { personId?: unknown })
+                  : student,
+            };
+          })
+        : studentsAttendance,
+    } as T;
   }
 
   async findByLevelAndDate(

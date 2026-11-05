@@ -2,17 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery } from 'mongoose';
 import { Members, MemberDocument } from 'src/schemas/member/member.shema';
-import { Users, UserDocument } from 'src/schemas/user/user.schema';
 import {
   MemberGeneralInfoDto,
   AdditionalAcademicStudyDto,
   RelativeDto,
   MemberMinistryStudyDto,
-  MemberWorkFrontDto,
   ChangeMemberStatusDto,
 } from 'src/schemas/member/Member.DTO';
 import { GeneralResponse } from 'src/dtos/genericResponse.dto';
 import { PaginatedResult, calculatePagination } from 'src/dtos/pagination.dto';
+import { PersonProvider } from 'src/providers/person/person.provider';
+import { withLegacyMemberFields } from 'src/utils/legacy-identity.util';
 
 @Injectable()
 export class MemberProvider {
@@ -20,7 +20,7 @@ export class MemberProvider {
 
   constructor(
     @InjectModel(Members.name) private memberModel: Model<MemberDocument>,
-    @InjectModel(Users.name) private userModel: Model<UserDocument>,
+    private readonly personProvider: PersonProvider,
   ) {}
 
   async getAllMembers(
@@ -49,15 +49,15 @@ export class MemberProvider {
     }
 
     if (search) {
-      const regex = new RegExp(search, 'i');
+      const personIds = await this.personProvider.findIdsBySearch(search);
 
-      filter.$or = [{ fullName: regex }, { documentNumber: regex }];
+      filter.$or = [{ personId: { $in: personIds } }];
     }
 
     const baseQuery = this.memberModel
       .find(filter)
       .sort({ createdAt: -1 })
-      .populate('personId')
+      .populate({ path: 'personId', model: 'Person' })
       .lean();
 
     const populatedQuery = churchId
@@ -76,16 +76,11 @@ export class MemberProvider {
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     return {
-      data: data as unknown as Members[],
+      data: data.map((member) =>
+        withLegacyMemberFields(member),
+      ) as unknown as Members[],
       metadata: { currentPage, totalPages, totalRecords },
     };
-  }
-
-  async findByEmails(emails: string[]): Promise<Pick<Members, 'email'>[]> {
-    return await this.memberModel
-      .find({ email: { $in: emails } })
-      .select('email')
-      .lean();
   }
 
   // This method retrieves the personIds of members that match the provided personIds and optional churchId.
@@ -120,20 +115,42 @@ export class MemberProvider {
     return this.memberModel.findOne({ personId, status: 'active' }).lean();
   }
 
+  async findByPersonId(
+    personId: string,
+    churchId: string,
+    excludeId?: string,
+  ): Promise<MemberDocument | null> {
+    const filter: FilterQuery<MemberDocument> = { personId, churchId };
+
+    if (excludeId) {
+      filter._id = { $ne: excludeId };
+    }
+
+    return this.memberModel.findOne(filter).lean();
+  }
+
+  async updatePersonId(memberId: string, personId: string): Promise<void> {
+    await this.memberModel.updateOne({ _id: memberId }, { $set: { personId } });
+  }
+
   async getMemberById(id: string, churchId?: string): Promise<Members | null> {
     const filter: FilterQuery<MemberDocument> = { _id: id };
     if (churchId) {
       filter.churchId = churchId;
     }
 
-    return await this.memberModel
+    const member = await this.memberModel
       .findOne(filter)
       .populate({
         path: 'workfront',
         model: 'Workfront',
       })
-      .populate('personId')
+      .populate({ path: 'personId', model: 'Person' })
       .lean();
+
+    if (!member) return null;
+
+    return withLegacyMemberFields(member) as unknown as Members;
   }
 
   async changeStatus(
@@ -234,9 +251,15 @@ export class MemberProvider {
         );
       }
 
-      response.data = await this.memberModel
+      const updatedMember = await this.memberModel
         .findOne({ _id: memberId, churchId })
-        .populate({ path: 'workfront', model: 'Workfront' });
+        .populate({ path: 'workfront', model: 'Workfront' })
+        .populate({ path: 'personId', model: 'Person' })
+        .lean();
+
+      response.data = updatedMember
+        ? withLegacyMemberFields(updatedMember)
+        : null;
 
       return response;
     } catch (error) {
@@ -267,7 +290,10 @@ export class MemberProvider {
         if (existingInChurch.status === 'inactive') {
           response.isSuccessful = false;
           response.message = 'El miembro se encuentra inactivo en esta iglesia';
-          response.data = existingInChurch;
+          response.data = await this.getMemberById(
+            String(existingInChurch._id),
+            String(member.churchId),
+          );
           return response;
         }
 
@@ -289,10 +315,19 @@ export class MemberProvider {
       }
 
       const newMember = await this.memberModel.create({
-        ...member,
         personId,
+        churchId: member.churchId,
+        conversionyear: member.conversionyear,
+        yearInChurch: member.yearInChurch,
+        isBaptised: member.isBaptised,
+        workfront: member.workfront || null,
+        comments: member.comments,
       });
-      response.data = newMember;
+
+      response.data = await this.getMemberById(
+        String(newMember._id),
+        String(member.churchId),
+      );
 
       return response;
     } catch (error: unknown) {
@@ -341,34 +376,16 @@ export class MemberProvider {
           },
           {
             $set: {
-              fullName: updatedMember.fullName,
-              address: updatedMember.address,
-              housingType: updatedMember.housingType,
-              landLine: updatedMember.landLine,
-              mobilePhone: updatedMember.mobilePhone,
-              birthDate: updatedMember.birthDate,
-              maritalStatus: updatedMember.maritalStatus,
-              educationalLevel: updatedMember.educationalLevel,
-              occupation: updatedMember.occupation,
               conversionyear: updatedMember.conversionyear,
               isBaptised: updatedMember.isBaptised,
               yearInChurch: updatedMember.yearInChurch,
-              documentType: updatedMember.documentType,
-              email: updatedMember.email,
-              workfront: updatedMember.workfront,
+              workfront: updatedMember.workfront || null,
               comments: updatedMember.comments,
             },
           },
         );
 
-        response.data = await this.memberModel
-          .findOne({
-            _id: memberId,
-          })
-          .populate({
-            path: 'workfront',
-            model: 'Workfront',
-          });
+        response.data = await this.getMemberById(memberId);
 
         return response;
       } catch (error) {
@@ -477,14 +494,7 @@ export class MemberProvider {
         return response;
       }
 
-      response.data = await this.memberModel
-        .findOne({
-          _id: memberId,
-        })
-        .populate({
-          path: 'workfront',
-          model: 'Workfront',
-        });
+      response.data = await this.getMemberById(memberId);
 
       return response;
     } catch (error) {
@@ -561,9 +571,15 @@ export class MemberProvider {
             documentNumber: relativeData.documentNumber,
             comments: relativeData.comments,
           };
-          const memberRelative = await this.memberModel.findOne({
-            documentNumber: relativeData.documentNumber,
-          });
+          const relativePerson = await this.personProvider.findByDocumentNumber(
+            relativeData.documentNumber,
+          );
+          const memberRelative = relativePerson
+            ? await this.memberModel.findOne({
+                personId: relativePerson._id,
+                churchId: existingMember.churchId,
+              })
+            : null;
 
           if (memberRelative) {
             (newRelative.isMember = true),
@@ -594,14 +610,7 @@ export class MemberProvider {
         return response;
       }
 
-      response.data = await this.memberModel
-        .findOne({
-          _id: memberId,
-        })
-        .populate({
-          path: 'workfront',
-          model: 'Workfront',
-        });
+      response.data = await this.getMemberById(memberId);
 
       return response;
     } catch (error) {
@@ -692,127 +701,12 @@ export class MemberProvider {
         return response;
       }
 
-      response.data = await this.memberModel
-        .findOne({
-          _id: memberId,
-        })
-        .populate({
-          path: 'workfront',
-          model: 'Workfront',
-        });
+      response.data = await this.getMemberById(memberId);
 
       return response;
     } catch (error) {
       response.isSuccessful = false;
       response.message = 'Información de estudios ministeriales inválida.';
-      return response;
-    }
-  }
-
-  async updateWorkfronts(
-    memberId: string,
-    workfrontData: MemberWorkFrontDto,
-  ): Promise<GeneralResponse> {
-    const response: GeneralResponse = { isSuccessful: true };
-
-    if (!workfrontData.workFrontId) {
-      response.isSuccessful = false;
-      response.message = 'Debe seleccionar un frente de trabajo válido.';
-      return response;
-    }
-
-    try {
-      const existingMember = await this.memberModel.findOne({
-        _id: memberId,
-      });
-
-      if (!existingMember) {
-        response.isSuccessful = false;
-        response.message = 'Persona no encontrada.';
-        return response;
-      }
-
-      try {
-        if (workfrontData._id) {
-          const filterWorkfronts = existingMember.workFronts.filter(
-            (workfront) => {
-              return workfront._id.toString() === workfrontData._id;
-            },
-          );
-
-          if (filterWorkfronts.length === 0) {
-            response.isSuccessful = false;
-            response.message = 'Información de frentes de trabajo inválida';
-
-            return response;
-          }
-
-          await this.memberModel.findOneAndUpdate(
-            {
-              _id: memberId,
-              'workFronts._id': workfrontData._id,
-            },
-            {
-              $set: {
-                'workFronts.$.startDate': workfrontData.startDate,
-                'workFronts.$.endDate': workfrontData.endDate,
-                'workFronts.$.role': workfrontData.role,
-                'workFronts.$.status': workfrontData.status,
-                'workFronts.$.comments': workfrontData.comments,
-                'workFronts.$.workFrontId': workfrontData.workFrontId,
-              },
-            },
-          );
-        } else {
-          const newWorkFront = {
-            startDate: workfrontData.startDate,
-            endDate: workfrontData.endDate,
-            role: workfrontData.role,
-            status: workfrontData.status,
-            comments: workfrontData.comments,
-            workFrontId: workfrontData.workFrontId,
-          };
-
-          await this.memberModel.updateOne(
-            {
-              _id: memberId,
-            },
-            {
-              $push: { workFronts: newWorkFront },
-            },
-            {
-              new: true,
-            },
-          );
-        }
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        this.logger.error(
-          `[updateWorkfronts] Error updating workfronts: ${err.message}`,
-          err.stack,
-        );
-
-        response.isSuccessful = false;
-        response.message =
-          'Error actualizando la información de frentes de trabajo';
-
-        return response;
-      }
-
-      response.data = await this.memberModel
-        .findOne({
-          _id: memberId,
-        })
-        .populate({
-          path: 'workfront',
-          model: 'Workfront',
-        });
-
-      return response;
-    } catch (error) {
-      response.isSuccessful = false;
-      response.message =
-        'Error actualizando la información de frentes de trabajo.';
       return response;
     }
   }

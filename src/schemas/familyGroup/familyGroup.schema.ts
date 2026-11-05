@@ -2,51 +2,6 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 import { ApiProperty } from '@nestjs/swagger';
 
-@Schema({ timestamps: true })
-export class FamilyGroupMember {
-  _id: number;
-
-  @ApiProperty({ example: 'Carlos Mario' })
-  @Prop()
-  name: string;
-
-  @ApiProperty({ example: '1236566' })
-  @Prop({ required: true })
-  documentNumber: string;
-
-  @ApiProperty({ example: 'CC' })
-  @Prop({ required: true })
-  documentType: string;
-
-  @ApiProperty({ example: 'CR 20 # 40' })
-  address: string;
-
-  @ApiProperty({ example: '316929417' })
-  @Prop()
-  mobilePhone: string;
-
-  @ApiProperty({ example: 'carlos@gmail.com' })
-  @Prop()
-  email: string;
-
-  @ApiProperty({ example: '2020-06-22' })
-  @Prop()
-  birthDate: Date;
-
-  @ApiProperty({ example: '2020-06-20' })
-  @Prop()
-  startingDate: string;
-
-  @ApiProperty({ example: 'Test' })
-  @Prop()
-  comments: string;
-}
-
-const FamilyGroupMemberSchema = SchemaFactory.createForClass(FamilyGroupMember);
-
-const familyGroupExample =
-  '[{"name": "Carlos Mario", "documentNumber": "123456", "documentType": "CC", "address": "CR 20 # 40", "mobilePhone": "316929417", "email": "carlos@gmail.com", "birthDate": "22/06/2000", "startingDate": "20/06/2020", "comments": "Test"}]';
-
 @Schema()
 class MemberAttendace {
   _id: number;
@@ -54,7 +9,7 @@ class MemberAttendace {
   @Prop({
     required: true,
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'FamilyGroupMember',
+    ref: 'FamilyGroupMembership',
   })
   familyGroupmember: string;
 
@@ -162,10 +117,6 @@ export class FamilyGroup {
     ref: 'Church',
   })
   churchId: string;
-
-  @ApiProperty({ example: familyGroupExample })
-  @Prop({ type: [FamilyGroupMemberSchema], default: [] })
-  members: [FamilyGroupMember];
 }
 
 export type FamilyGroupDocument = FamilyGroup & mongoose.Document;

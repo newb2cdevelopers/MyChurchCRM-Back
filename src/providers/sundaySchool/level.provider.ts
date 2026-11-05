@@ -7,6 +7,7 @@ import { Students, StudentDocument } from 'src/schemas/student/student.schema';
 import { Users, UserDocument } from 'src/schemas/user/user.schema';
 import { Members, MemberDocument } from 'src/schemas/member/member.shema';
 import { TtlCache } from 'src/utilities/ttl-cache';
+import { withLegacyMemberFields } from 'src/utils/legacy-identity.util';
 
 export interface UserScopeInfo {
   roleNames: string[];
@@ -116,15 +117,32 @@ export class LevelProvider {
       filter.name = { $regex: search, $options: 'i' };
     }
 
-    return this.levelModel
+    const levels = await this.levelModel
       .find(filter)
-      .populate('teachers')
+      .populate({
+        path: 'teachers',
+        populate: { path: 'personId', model: 'Person' },
+      })
       .sort({ minAge: 1 })
       .lean();
+
+    return levels.map((level) =>
+      this.withLegacyTeachers(level),
+    ) as unknown as LevelDocument[];
   }
 
   async getById(id: string): Promise<LevelDocument | null> {
-    return this.levelModel.findById(id).populate('teachers').lean();
+    const level = await this.levelModel
+      .findById(id)
+      .populate({
+        path: 'teachers',
+        populate: { path: 'personId', model: 'Person' },
+      })
+      .lean();
+
+    if (!level) return null;
+
+    return this.withLegacyTeachers(level) as unknown as LevelDocument;
   }
 
   async getLevelIdsByChurch(churchId: string): Promise<string[]> {
@@ -179,10 +197,32 @@ export class LevelProvider {
     id: string,
     level: UpdateLevelDto,
   ): Promise<LevelDocument | null> {
-    return this.levelModel
+    const updated = await this.levelModel
       .findByIdAndUpdate(id, { $set: level }, { new: true })
-      .populate('teachers')
+      .populate({
+        path: 'teachers',
+        populate: { path: 'personId', model: 'Person' },
+      })
       .lean();
+
+    if (!updated) return null;
+
+    return this.withLegacyTeachers(updated) as unknown as LevelDocument;
+  }
+
+  private withLegacyTeachers<T extends { teachers?: unknown }>(level: T): T {
+    const teachers = level.teachers;
+
+    if (!Array.isArray(teachers)) return level;
+
+    return {
+      ...level,
+      teachers: teachers.map((teacher) =>
+        teacher && typeof teacher === 'object'
+          ? withLegacyMemberFields(teacher as { personId?: unknown })
+          : teacher,
+      ),
+    };
   }
 
   async delete(id: string): Promise<void> {
